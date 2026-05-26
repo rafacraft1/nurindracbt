@@ -11,14 +11,69 @@
 <?= $this->section('content') ?>
 
 <style>
-    /* CSS Khusus Printer (Menghilangkan elemen UI dan menata kertas A4) */
+    /* ===================================================
+       STYLE UMUM (Sama untuk Layar & Printer)
+       =================================================== */
+    .grid-siswa {
+        display: grid;
+        grid-template-columns: repeat(2, 85.6mm);
+        /* 2 Kolom ukuran KTP */
+        grid-auto-rows: 43.98mm;
+        /* Tinggi kartu siswa */
+        gap: 5mm;
+        justify-content: center;
+        margin: 0 auto;
+    }
+
+    /* Responsif di browser jika layar hp/kecil agar tidak overflow */
+    @media (max-width: 740px) {
+        .grid-siswa {
+            grid-template-columns: repeat(auto-fit, 85.6mm);
+        }
+    }
+
+    .kartu-siswa {
+        width: 85.6mm;
+        height: 43.98mm;
+        box-sizing: border-box;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background-color: white;
+        border: 2px solid #1e293b;
+        /* slate-800 */
+        border-radius: 0.5rem;
+        /* rounded-lg */
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+
+    /* ===================================================
+       OPTIMASI LAZY LOAD DOM (Hanya untuk Layar/Browser)
+       =================================================== */
+    @media screen {
+
+        /* Hanya render elemen saat masuk ke viewport (layar) */
+        .page-container,
+        .kartu-item {
+            content-visibility: auto;
+            contain-intrinsic-size: auto 1000px;
+        }
+    }
+
+    /* ===================================================
+       CSS KHUSUS PRINTER
+       =================================================== */
     @media print {
         @page {
-            size: A4;
-            margin: 10mm;
+            size: A4 portrait;
+            margin-top: 30mm;
+            /* Jarak cetak 3 cm dari ujung kertas atas */
+            margin-bottom: 5mm;
+            margin-left: 5mm;
+            margin-right: 5mm;
         }
 
-        /* Tambahkan ini untuk memastikan body tidak menahan page break */
         html,
         body {
             height: auto !important;
@@ -28,14 +83,13 @@
             print-color-adjust: exact;
         }
 
-        /* Sembunyikan Sidebar & Header dari layout utama */
+        /* Sembunyikan Elemen UI */
         aside,
         header,
         .no-print {
             display: none !important;
         }
 
-        /* Buka kunci scroll main area agar bisa berhalaman-halaman */
         main {
             overflow: visible !important;
             height: auto !important;
@@ -43,40 +97,62 @@
             padding: 0 !important;
         }
 
-        /* Pastikan tab yang tidak aktif benar-benar hilang saat diprint */
         .tab-content:not(.active-print) {
             display: none !important;
         }
 
-        /* Mencegah kartu terpotong dengan Float (Paling stabil di Chrome) */
-        .kartu-item {
+        /* Rule pembagi halaman per 10 kartu */
+        .page-container {
+            page-break-after: always !important;
+            break-after: page !important;
+        }
+
+        .page-container:last-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+        }
+
+        /* Paksa grid tetap 2 kolom saat cetak */
+        .grid-siswa {
+            display: grid !important;
+            grid-template-columns: repeat(2, 85.6mm) !important;
+            grid-auto-rows: 43.98mm !important;
+            gap: 4mm !important;
+            justify-content: center !important;
+        }
+
+        .kartu-siswa {
+            box-shadow: none !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            -webkit-column-break-inside: avoid !important;
+            margin: 0 !important;
+        }
+
+        /* GRID KHUSUS STAFF */
+        #tab-staff .print-grid {
+            display: block !important;
+        }
+
+        #tab-staff .print-grid::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        #tab-staff .kartu-item {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
             float: left !important;
-            /* Gunakan float, bukan inline-block */
             width: calc(50% - 0.5rem) !important;
             margin-bottom: 1rem !important;
         }
 
-        /* Spasi antar kolom */
-        .kartu-item:nth-child(odd) {
+        #tab-staff .kartu-item:nth-child(odd) {
             margin-right: 1rem !important;
         }
 
-        .kartu-item:nth-child(even) {
+        #tab-staff .kartu-item:nth-child(even) {
             margin-right: 0 !important;
-        }
-
-        /* Paksa block dan tambahkan Clearfix karena menggunakan float */
-        .print-grid {
-            display: block !important;
-        }
-
-        .print-grid::after {
-            content: "";
-            display: table;
-            clear: both;
         }
     }
 </style>
@@ -102,79 +178,82 @@
 </div>
 
 <div id="tab-siswa" class="tab-content active-print block">
-    <div class="print-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+    <?php if (!empty($siswa)): ?>
+        <?php foreach (array_chunk($siswa, 10) as $index => $chunk): ?>
+            <div class="page-container <?= $index > 0 ? 'mt-10 print:mt-0' : '' ?>">
+                <div class="grid-siswa">
+                    <?php foreach ($chunk as $s): ?>
+                        <div class="kartu-siswa">
+                            <div class="flex items-center border-b-2 border-slate-800 pb-1 mb-[3mm]">
+                                <div class="w-8 h-8 border border-slate-400 flex items-center justify-center mr-2 rounded-full shrink-0 overflow-hidden bg-white">
+                                    <?php if (!empty($pengaturan['logo'])): ?>
+                                        <img src="<?= base_url('uploads/' . $pengaturan['logo']) ?>" loading="lazy" alt="Logo" class="w-full h-full object-contain p-0.5">
+                                    <?php else: ?>
+                                        <span class="text-[7px] text-slate-500 font-bold">LOGO</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="leading-tight">
+                                    <h2 class="font-bold text-xs uppercase text-slate-800">Kartu Login CBT</h2>
+                                    <p class="text-[9px] text-slate-600">
+                                        <?= esc($pengaturan['nama_sekolah'] ?? 'Ujian Berbasis Komputer & Smartphone') ?>
+                                    </p>
+                                </div>
+                            </div>
 
-        <?php foreach ($siswa as $s): ?>
-            <div class="kartu-item border-2 border-slate-800 rounded-lg p-3 bg-white relative">
+                            <div class="flex gap-2 h-full items-start">
+                                <div class="w-14 h-16 border border-slate-400 bg-slate-100 flex flex-col items-center justify-center shrink-0">
+                                    <span class="text-[8px] text-slate-400 font-semibold">3 x 4</span>
+                                </div>
 
-                <div class="flex items-center border-b-2 border-slate-800 pb-2 mb-2">
-                    <div class="w-10 h-10 border border-slate-400 flex items-center justify-center mr-3 rounded-full shrink-0 overflow-hidden bg-white">
-                        <?php if (!empty($pengaturan['logo'])): ?>
-                            <img src="<?= base_url('uploads/' . $pengaturan['logo']) ?>" alt="Logo" class="w-full h-full object-contain p-1">
-                        <?php else: ?>
-                            <span class="text-[8px] text-slate-500 font-bold">LOGO</span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="leading-tight">
-                        <h2 class="font-bold text-sm uppercase text-slate-800">Kartu Login CBT</h2>
-                        <p class="text-[10px] text-slate-600">
-                            <?= esc($pengaturan['nama_sekolah'] ?? 'Ujian Berbasis Komputer & Smartphone') ?>
-                        </p>
-                    </div>
+                                <div class="flex-1 text-[10px] text-slate-800">
+                                    <table class="w-full table-fixed">
+                                        <tr>
+                                            <td class="font-bold align-top w-12 leading-tight">Nama</td>
+                                            <td class="w-2 align-top leading-tight">:</td>
+                                            <td class="font-bold uppercase whitespace-normal break-words leading-tight align-top pb-0.5"><?= esc($s['nama_lengkap']) ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-bold align-top leading-tight">Kelas</td>
+                                            <td class="align-top leading-tight">:</td>
+                                            <td class="align-top leading-tight pb-0.5"><?= esc($s['tingkat'] . ' ' . $s['jurusan'] . ' ' . $s['rombel']) ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-bold align-top leading-tight">Ruangan</td>
+                                            <td class="align-top leading-tight">:</td>
+                                            <td class="align-top leading-tight pb-0.5">
+                                                <span class="font-bold text-blue-700 bg-blue-50 px-1 rounded inline-block">
+                                                    <?= esc($s['nama_ruangan'] ?? 'Belum Diplot') ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="py-0.5">
+                                                <div class="border-t border-dashed border-slate-400 my-0.5"></div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-bold leading-tight text-blue-700">NISN</td>
+                                            <td class="font-bold leading-tight text-blue-700">:</td>
+                                            <td class="font-mono font-bold leading-tight text-blue-700 text-[10px]"><?= esc($s['nisn']) ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="font-bold leading-tight text-red-600">Password</td>
+                                            <td class="font-bold leading-tight text-red-600">:</td>
+                                            <td class="font-mono font-bold leading-tight text-red-600 text-[10px]"><?= esc($s['password_plain'] ?? 'siswa123') ?></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-
-                <div class="flex gap-3">
-                    <div class="w-16 h-20 border border-slate-400 bg-slate-100 flex flex-col items-center justify-center shrink-0">
-                        <span class="text-[9px] text-slate-400 font-semibold">3 x 4</span>
-                    </div>
-
-                    <div class="flex-1 text-[11px] text-slate-800">
-                        <table class="w-full">
-                            <tr>
-                                <td class="font-bold py-0.5 w-16">Nama</td>
-                                <td class="w-2">:</td>
-                                <td class="font-bold truncate max-w-[120px] uppercase"><?= esc($s['nama_lengkap']) ?></td>
-                            </tr>
-                            <tr>
-                                <td class="font-bold py-0.5">Kelas</td>
-                                <td>:</td>
-                                <td><?= esc($s['tingkat'] . ' ' . $s['jurusan'] . ' ' . $s['rombel']) ?></td>
-                            </tr>
-                            <tr>
-                                <td class="font-bold py-0.5">Ruangan</td>
-                                <td>:</td>
-                                <td class="font-bold text-blue-700 bg-blue-50 px-1 rounded inline-block">
-                                    <?= esc($s['nama_ruangan'] ?? 'Belum Diplot') ?>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td colspan="3" class="py-0.5">
-                                    <div class="border-t border-dashed border-slate-400 my-0.5"></div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="font-bold py-0.5 text-blue-700">NISN</td>
-                                <td class="font-bold text-blue-700">:</td>
-                                <td class="font-mono font-bold text-blue-700 text-xs"><?= esc($s['nisn']) ?></td>
-                            </tr>
-                            <tr>
-                                <td class="font-bold py-0.5 text-red-600">Password</td>
-                                <td class="font-bold text-red-600">:</td>
-                                <td class="font-mono font-bold text-red-600 text-xs"><?= esc($s['password_plain'] ?? 'siswa123') ?></td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-
             </div>
         <?php endforeach; ?>
-
-        <?php if (empty($siswa)): ?>
-            <div class="col-span-full p-8 text-center text-slate-500 no-print border-2 border-dashed border-slate-300 rounded-xl">
-                Belum ada data siswa untuk dicetak.
-            </div>
-        <?php endif; ?>
-    </div>
+    <?php else: ?>
+        <div class="col-span-full p-8 text-center text-slate-500 no-print border-2 border-dashed border-slate-300 rounded-xl">
+            Belum ada data siswa untuk dicetak.
+        </div>
+    <?php endif; ?>
 </div>
 
 <div id="tab-staff" class="tab-content hidden">
@@ -197,7 +276,7 @@
                 <div class="<?= $bgClass ?> text-white p-3 border-b-2 border-slate-800 flex justify-center items-center gap-2">
                     <?php if (!empty($pengaturan['logo'])): ?>
                         <div class="w-5 h-5 bg-white rounded-full overflow-hidden flex items-center justify-center shrink-0">
-                            <img src="<?= base_url('uploads/' . $pengaturan['logo']) ?>" alt="Logo" class="w-full h-full object-contain p-[2px]">
+                            <img src="<?= base_url('uploads/' . $pengaturan['logo']) ?>" loading="lazy" alt="Logo" class="w-full h-full object-contain p-[2px]">
                         </div>
                     <?php endif; ?>
                     <h2 class="font-bold text-xs uppercase tracking-wider">ID CARD STAFF</h2>
