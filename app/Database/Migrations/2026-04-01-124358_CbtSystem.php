@@ -79,17 +79,18 @@ class CbtSystem extends Migration
         $this->forge->addKey('id', true);
         $this->forge->createTable('ruangan');
         $this->forge->addField([
-            'id'           => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
-            'nisn'         => ['type' => 'VARCHAR', 'constraint' => 20],
-            'password'     => ['type' => 'VARCHAR', 'constraint' => 255],
-            'nama_lengkap' => ['type' => 'VARCHAR', 'constraint' => 100],
-            'tingkat'      => ['type' => 'VARCHAR', 'constraint' => 10],
-            'jurusan'      => ['type' => 'VARCHAR', 'constraint' => 50],
-            'rombel'       => ['type' => 'VARCHAR', 'constraint' => 10],
-            'ruangan_id'   => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'null' => true],
-            'is_login'     => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 0],
-            'last_active'  => ['type' => 'DATETIME', 'null' => true],
-            'created_at'   => ['type' => 'DATETIME', 'null' => true],
+            'id'             => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
+            'nisn'           => ['type' => 'VARCHAR', 'constraint' => 20],
+            'password'       => ['type' => 'VARCHAR', 'constraint' => 255],
+            'password_plain' => ['type' => 'VARCHAR', 'constraint' => 50, 'null' => true, 'comment' => 'Teks asli khusus untuk cetak kartu'],
+            'nama_lengkap'   => ['type' => 'VARCHAR', 'constraint' => 100],
+            'tingkat'        => ['type' => 'VARCHAR', 'constraint' => 10],
+            'jurusan'        => ['type' => 'VARCHAR', 'constraint' => 50],
+            'rombel'         => ['type' => 'VARCHAR', 'constraint' => 10],
+            'ruangan_id'     => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'null' => true],
+            'is_login'       => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 0],
+            'last_active'    => ['type' => 'DATETIME', 'null' => true],
+            'created_at'     => ['type' => 'DATETIME', 'null' => true],
         ]);
         $this->forge->addKey('id', true);
         $this->forge->addUniqueKey('nisn');

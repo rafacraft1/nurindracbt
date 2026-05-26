@@ -66,13 +66,14 @@ class DevSeeder extends Seeder
         $siswaData = [];
         for ($i = 1; $i <= 10; $i++) {
             $siswaData[] = [
-                'nisn'         => '1000' . str_pad($i, 3, '0', STR_PAD_LEFT),
-                'password'     => password_hash('siswa123', PASSWORD_DEFAULT),
-                'nama_lengkap' => 'Siswa Dummy ' . $i,
-                'tingkat'      => 'XII',
-                'jurusan'      => 'RPL',
-                'rombel'       => '1',
-                'ruangan_id'   => 1,
+                'nisn'           => '1000' . str_pad($i, 3, '0', STR_PAD_LEFT),
+                'password'       => password_hash('siswa123', PASSWORD_DEFAULT),
+                'password_plain' => 'siswa123',
+                'nama_lengkap'   => 'Siswa Dummy ' . $i,
+                'tingkat'        => 'XII',
+                'jurusan'        => 'RPL',
+                'rombel'         => '1',
+                'ruangan_id'     => 1,
             ];
         }
         $this->db->table('siswa')->insertBatch($siswaData);

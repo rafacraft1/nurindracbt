@@ -50,8 +50,14 @@ $namaSekolah = $pengaturanPanel['nama_sekolah'] ?? 'CBT PRO';
     <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-40 hidden transition-opacity md:hidden"></div>
 
     <aside id="sidebar" class="bg-slate-800 text-slate-300 w-64 shrink-0 shadow-xl flex flex-col transition-all duration-300 z-50 fixed inset-y-0 left-0 md:static transform -translate-x-full md:translate-x-0 h-full">
-        <div class="h-16 flex items-center justify-center border-b border-slate-700 bg-slate-900 shrink-0">
-            <h1 class="font-bold text-2xl tracking-wider text-blue-400">CBT<span class="text-white">PRO</span></h1>
+
+        <div class="h-16 flex items-center justify-center gap-3 border-b border-slate-700 bg-slate-900 shrink-0 px-4">
+            <?php if ($logoSekolah): ?>
+                <div class="w-9 h-9 bg-white rounded-md flex items-center justify-center shrink-0 overflow-hidden p-0.5 shadow-sm">
+                    <img src="<?= base_url('uploads/' . $logoSekolah) ?>" alt="Logo" class="w-full h-full object-contain">
+                </div>
+            <?php endif; ?>
+            <h1 class="font-bold text-2xl tracking-wider text-blue-400 truncate">CBT<span class="text-white">PRO</span></h1>
         </div>
 
         <nav id="sidebarNav" class="flex-1 p-4 space-y-1.5 overflow-y-auto no-scrollbar scroll-smooth">

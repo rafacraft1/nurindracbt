@@ -41,11 +41,13 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
         $routes->get('siswa', 'PanitiaController::siswa');
         $routes->post('siswa/store', 'PanitiaController::storeSiswa');
         $routes->post('siswa/update/(:num)', 'PanitiaController::updateSiswa/$1');
+        $routes->post('siswa/delete-batch', 'PanitiaController::deleteSiswaBatch');
         $routes->post('siswa/delete/(:num)', 'PanitiaController::deleteSiswa/$1');
         $routes->post('siswa/import', 'PanitiaController::importSiswa');
 
         $routes->get('mapel', 'PanitiaController::mapel');
         $routes->post('mapel/store', 'PanitiaController::storeMapel');
+        $routes->post('mapel/update/(:num)', 'PanitiaController::updateMapel/$1');
         $routes->post('mapel/delete/(:num)', 'PanitiaController::deleteMapel/$1');
         $routes->post('mapel/sync-guru', 'PanitiaController::syncGuruMapel');
 

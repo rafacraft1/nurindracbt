@@ -39,6 +39,9 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class PanitiaController extends BaseController
 {
+    /**
+     * @var \CodeIgniter\Database\BaseConnection
+     */
     protected $db;
 
     public function __construct()
@@ -84,7 +87,7 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('success', 'Ruangan berhasil ditambahkan.');
     }
 
-    public function deleteRuangan($id)
+    public function deleteRuangan(string $id)
     {
         $this->db->table('siswa')->where('ruangan_id', $id)->update(['ruangan_id' => null]);
         $this->db->table('ruangan')->where('id', $id)->delete();
@@ -106,7 +109,7 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('success', 'Data penghuni ruangan berhasil disinkronisasi.');
     }
 
-    public function kosongkanRuangan($id)
+    public function kosongkanRuangan(string $id)
     {
         $this->db->table('siswa')->where('ruangan_id', $id)->update(['ruangan_id' => null]);
         return redirect()->back()->with('success', 'Ruangan berhasil dikosongkan.');
@@ -118,8 +121,14 @@ class PanitiaController extends BaseController
         $page    = (int)($this->request->getGet('page') ?? 1);
         if ($page < 1) $page = 1;
 
+        // Tangkap parameter sorting (Default: urut berdasarkan Kelas)
+        $sortCol = $this->request->getGet('sort') ?? 'kelas';
+        $sortDir = strtoupper($this->request->getGet('dir') ?? 'ASC');
+        if (!in_array($sortDir, ['ASC', 'DESC'])) $sortDir = 'ASC';
+
         $perPage = 50;
         $offset  = ($page - 1) * $perPage;
+
         $builderCount = $this->db->table('siswa');
         if (!empty($search)) {
             $builderCount->groupStart()
@@ -129,6 +138,7 @@ class PanitiaController extends BaseController
         }
         $totalData  = $builderCount->countAllResults();
         $totalPages = ceil($totalData / $perPage);
+
         $builderData = $this->db->table('siswa');
         if (!empty($search)) {
             $builderData->groupStart()
@@ -137,12 +147,21 @@ class PanitiaController extends BaseController
                 ->groupEnd();
         }
 
-        $siswa = $builderData->orderBy('tingkat', 'ASC')
-            ->orderBy('jurusan', 'ASC')
-            ->orderBy('rombel', 'ASC')
-            ->orderBy('nama_lengkap', 'ASC')
-            ->limit($perPage, $offset)
-            ->get()->getResultArray();
+        // Terapkan logika pengurutan dinamis
+        if ($sortCol === 'nisn') {
+            $builderData->orderBy('nisn', $sortDir);
+        } elseif ($sortCol === 'nama') {
+            $builderData->orderBy('nama_lengkap', $sortDir);
+        } else {
+            // Urutan default (Berdasarkan Tingkat -> Jurusan -> Rombel)
+            $sortCol = 'kelas';
+            $builderData->orderBy('tingkat', $sortDir)
+                ->orderBy('jurusan', $sortDir)
+                ->orderBy('rombel', $sortDir)
+                ->orderBy('nama_lengkap', 'ASC');
+        }
+
+        $siswa = $builderData->limit($perPage, $offset)->get()->getResultArray();
 
         $ruangan = $this->db->table('ruangan')->get()->getResultArray();
 
@@ -153,7 +172,9 @@ class PanitiaController extends BaseController
             'currentPage' => $page,
             'totalPages'  => $totalPages,
             'totalData'   => $totalData,
-            'search'      => $search
+            'search'      => $search,
+            'sortCol'     => $sortCol, // Lempar param ke view
+            'sortDir'     => $sortDir  // Lempar param ke view
         ];
 
         return view('panel/siswa', $data);
@@ -170,21 +191,22 @@ class PanitiaController extends BaseController
         $passwordPlain = $this->request->getPost('password') ?: 'siswa123';
 
         $dataInsert = [
-            'nisn'         => $nisn,
-            'password'     => password_hash($passwordPlain, PASSWORD_DEFAULT),
-            'nama_lengkap' => strtoupper($this->request->getPost('nama_lengkap')),
-            'tingkat'      => strtoupper($this->request->getPost('tingkat')),
-            'jurusan'      => strtoupper($this->request->getPost('jurusan')),
-            'rombel'       => strtoupper($this->request->getPost('rombel')),
-            'ruangan_id'   => $this->request->getPost('ruangan_id') ?: null,
-            'created_at'   => date('Y-m-d H:i:s')
+            'nisn'           => $nisn,
+            'password'       => password_hash($passwordPlain, PASSWORD_DEFAULT),
+            'password_plain' => $passwordPlain,
+            'nama_lengkap'   => strtoupper($this->request->getPost('nama_lengkap')),
+            'tingkat'        => strtoupper($this->request->getPost('tingkat')),
+            'jurusan'        => strtoupper($this->request->getPost('jurusan')),
+            'rombel'         => strtoupper($this->request->getPost('rombel')),
+            'ruangan_id'     => $this->request->getPost('ruangan_id') ?: null,
+            'created_at'     => date('Y-m-d H:i:s')
         ];
 
         $this->db->table('siswa')->insert($dataInsert);
         return redirect()->back()->with('success', 'Data siswa berhasil ditambahkan.');
     }
 
-    public function updateSiswa($id)
+    public function updateSiswa(string $id)
     {
         $dataUpdate = [
             'nama_lengkap' => strtoupper($this->request->getPost('nama_lengkap')),
@@ -196,67 +218,146 @@ class PanitiaController extends BaseController
 
         $passwordBaru = $this->request->getPost('password');
         if (!empty($passwordBaru)) {
-            $dataUpdate['password'] = password_hash($passwordBaru, PASSWORD_DEFAULT);
+            $dataUpdate['password']       = password_hash($passwordBaru, PASSWORD_DEFAULT);
+            $dataUpdate['password_plain'] = $passwordBaru;
         }
 
         $this->db->table('siswa')->where('id', $id)->update($dataUpdate);
         return redirect()->back()->with('success', 'Data siswa berhasil diperbarui.');
     }
 
-    public function deleteSiswa($id)
+    public function deleteSiswa(string $id)
     {
         $this->db->table('siswa')->where('id', $id)->delete();
         return redirect()->back()->with('success', 'Data siswa berhasil dihapus.');
     }
 
+    public function deleteSiswaBatch()
+    {
+        $ids = $this->request->getPost('ids');
+        if (empty($ids) || !is_array($ids)) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Tidak ada data siswa yang dipilih.',
+                'csrf' => csrf_hash()
+            ]);
+        }
+
+        $this->db->table('siswa')->whereIn('id', $ids)->delete();
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'message' => count($ids) . ' data siswa berhasil dihapus secara permanen.',
+            'csrf' => csrf_hash()
+        ]);
+    }
+
     public function importSiswa()
     {
-        $file = $this->request->getFile('file_excel');
+        $step = $this->request->getPost('step') ?? 'init';
 
-        if (!$file || !$file->isValid() || $file->hasMoved()) {
-            return redirect()->back()->with('error', 'Pilih file Excel yang valid!');
+        if ($step === 'init') {
+            $file = $this->request->getFile('file_excel');
+
+            if (!$file || !$file->isValid() || $file->hasMoved()) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Pilih file Excel yang valid!', 'csrf' => csrf_hash()]);
+            }
+
+            $extension = $file->getClientExtension();
+            if (!in_array($extension, ['xls', 'xlsx'])) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Format file harus .xls atau .xlsx', 'csrf' => csrf_hash()]);
+            }
+
+            try {
+                $spreadsheet = IOFactory::load($file->getTempName());
+                $sheet       = $spreadsheet->getActiveSheet();
+                $rows        = $sheet->toArray();
+
+                $cleanRows = [];
+                foreach ($rows as $key => $row) {
+                    if ($key == 0) continue;
+                    $nisn = trim($row[0] ?? '');
+                    $nama = trim($row[1] ?? '');
+                    if (empty($nisn) || empty($nama)) continue;
+                    $cleanRows[] = $row;
+                }
+
+                if (empty($cleanRows)) {
+                    return $this->response->setJSON(['status' => 'error', 'message' => 'Data tidak ditemukan di dalam Excel.', 'csrf' => csrf_hash()]);
+                }
+
+                $tempId = uniqid('import_');
+                $filePath = WRITEPATH . 'uploads/' . $tempId . '.json';
+                file_put_contents($filePath, json_encode($cleanRows));
+
+                return $this->response->setJSON([
+                    'status'  => 'success',
+                    'temp_id' => $tempId,
+                    'total'   => count($cleanRows),
+                    'csrf'    => csrf_hash()
+                ]);
+            } catch (\Exception $e) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal membaca file: ' . $e->getMessage(), 'csrf' => csrf_hash()]);
+            }
         }
 
-        $extension = $file->getClientExtension();
-        if (!in_array($extension, ['xls', 'xlsx'])) {
-            return redirect()->back()->with('error', 'Format file harus .xls atau .xlsx');
-        }
+        if ($step === 'process') {
+            set_time_limit(0);
+            ini_set('memory_limit', '512M');
 
-        try {
-            $spreadsheet = IOFactory::load($file->getTempName());
-            $sheet       = $spreadsheet->getActiveSheet();
-            $rows        = $sheet->toArray();
+            $tempId = $this->request->getPost('temp_id');
+            $offset = (int) $this->request->getPost('offset');
+            $limit  = (int) $this->request->getPost('limit');
 
-            $dataInsert = [];
+            $filePath = WRITEPATH . 'uploads/' . $tempId . '.json';
+            if (!file_exists($filePath)) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'File temporary tidak ditemukan. Muat ulang halaman.', 'csrf' => csrf_hash()]);
+            }
+
+            $rows = json_decode(file_get_contents($filePath), true);
+            $chunk = array_slice($rows, $offset, $limit);
+
+            $dataInsert   = [];
             $jumlahSukses = 0;
             $jumlahGagal  = 0;
 
-            foreach ($rows as $key => $row) {
-                if ($key == 0) continue;
+            $existingDb = $this->db->table('siswa')->select('nisn')->get()->getResultArray();
+            $existingMap = [];
+            foreach ($existingDb as $rowDb) {
+                $existingMap[$rowDb['nisn']] = true;
+            }
 
+            $passwordCache = [];
+            $passwordCache['siswa123'] = password_hash('siswa123', PASSWORD_DEFAULT);
+
+            foreach ($chunk as $row) {
                 $nisn = trim($row[0] ?? '');
                 $nama = trim($row[1] ?? '');
 
-                if (empty($nisn) || empty($nama)) continue;
-
-                if ($this->db->table('siswa')->where('nisn', $nisn)->countAllResults() > 0) {
+                if (isset($existingMap[$nisn])) {
                     $jumlahGagal++;
                     continue;
                 }
 
                 $passwordPlain = trim($row[5] ?? '') ?: 'siswa123';
 
+                if (!isset($passwordCache[$passwordPlain])) {
+                    $passwordCache[$passwordPlain] = password_hash($passwordPlain, PASSWORD_DEFAULT);
+                }
+
                 $dataInsert[] = [
-                    'nisn'         => $nisn,
-                    'password'     => password_hash($passwordPlain, PASSWORD_DEFAULT),
-                    'nama_lengkap' => strtoupper($nama),
-                    'tingkat'      => strtoupper(trim($row[2] ?? '')),
-                    'jurusan'      => strtoupper(trim($row[3] ?? '')),
-                    'rombel'       => strtoupper(trim($row[4] ?? '')),
-                    'ruangan_id'   => null,
-                    'created_at'   => date('Y-m-d H:i:s')
+                    'nisn'           => $nisn,
+                    'password'       => $passwordCache[$passwordPlain],
+                    'password_plain' => $passwordPlain,
+                    'nama_lengkap'   => strtoupper($nama),
+                    'tingkat'        => strtoupper(trim($row[2] ?? '')),
+                    'jurusan'        => strtoupper(trim($row[3] ?? '')),
+                    'rombel'         => strtoupper(trim($row[4] ?? '')),
+                    'ruangan_id'     => null,
+                    'created_at'     => date('Y-m-d H:i:s')
                 ];
 
+                $existingMap[$nisn] = true;
                 $jumlahSukses++;
             }
 
@@ -264,13 +365,29 @@ class PanitiaController extends BaseController
                 $this->db->table('siswa')->insertBatch($dataInsert);
             }
 
-            $pesan = "Import Selesai! Berhasil: $jumlahSukses siswa.";
-            if ($jumlahGagal > 0) $pesan .= " Gagal (NISN Duplikat): $jumlahGagal siswa.";
-
-            return redirect()->back()->with('success', $pesan);
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal memproses file: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'success',
+                'sukses' => $jumlahSukses,
+                'gagal'  => $jumlahGagal,
+                'csrf'   => csrf_hash()
+            ]);
         }
+
+        if ($step === 'finish') {
+            $tempId = $this->request->getPost('temp_id');
+            $filePath = WRITEPATH . 'uploads/' . $tempId . '.json';
+
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+
+            return $this->response->setJSON([
+                'status' => 'success',
+                'csrf'   => csrf_hash()
+            ]);
+        }
+
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid Step', 'csrf' => csrf_hash()]);
     }
 
     public function mapel()
@@ -317,7 +434,19 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('success', 'Mata Pelajaran berhasil ditambahkan.');
     }
 
-    public function deleteMapel($id)
+    public function updateMapel(string $id)
+    {
+        $namaMapel = strtoupper($this->request->getPost('nama_mapel'));
+
+        if ($this->db->table('master_mapel')->where('nama_mapel', $namaMapel)->where('id !=', $id)->countAllResults() > 0) {
+            return redirect()->back()->with('error', 'Gagal! Nama Mata Pelajaran sudah dipakai.');
+        }
+
+        $this->db->table('master_mapel')->where('id', $id)->update(['nama_mapel' => $namaMapel]);
+        return redirect()->back()->with('success', 'Mata Pelajaran berhasil diperbarui.');
+    }
+
+    public function deleteMapel(string $id)
     {
         $this->db->table('guru_mapel')->where('mapel_id', $id)->delete();
         $this->db->table('master_mapel')->where('id', $id)->delete();
@@ -373,7 +502,7 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('success', 'Jenis Ujian berhasil ditambahkan.');
     }
 
-    public function updateJenisUjian($id)
+    public function updateJenisUjian(string $id)
     {
         $namaUjian = strtoupper($this->request->getPost('nama_ujian'));
 
@@ -385,7 +514,7 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('success', 'Jenis Ujian berhasil diperbarui.');
     }
 
-    public function deleteJenisUjian($id)
+    public function deleteJenisUjian(string $id)
     {
         $cekDipakai = $this->db->table('jadwal_ujian')->where('jenis_ujian_id', $id)->countAllResults();
 
@@ -506,7 +635,7 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('success', 'Kerangka jadwal berhasil dibuat. Silakan Plot Pengawas.');
     }
 
-    public function updateJadwal($id)
+    public function updateJadwal(string $id)
     {
         $jadwal = $this->db->table('jadwal_ujian')->where('id', $id)->get()->getRowArray();
 
@@ -539,7 +668,7 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('success', $pesan);
     }
 
-    public function deleteJadwal($id)
+    public function deleteJadwal(string $id)
     {
         $jadwal = $this->db->table('jadwal_ujian')->where('id', $id)->get()->getRowArray();
         if ($jadwal['status'] === 'active') {
@@ -585,7 +714,7 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('success', 'Pengawas berhasil di-plot tanpa bentrok!');
     }
 
-    public function generateJson($jadwalId)
+    public function generateJson(string $jadwalId)
     {
         $jadwal = $this->db->table('jadwal_ujian')->where('id', $jadwalId)->get()->getRowArray();
         if (!$jadwal) return redirect()->back()->with('error', 'Jadwal tidak ditemukan.');
@@ -627,10 +756,13 @@ class PanitiaController extends BaseController
             ->orderBy('nama_lengkap', 'ASC')
             ->get()->getResultArray();
 
+        $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+
         $data = [
-            'title' => 'Cetak Kartu Ujian - CBT PRO',
-            'siswa' => $siswa,
-            'staff' => $staff
+            'title'      => 'Cetak Kartu Ujian - CBT PRO',
+            'siswa'      => $siswa,
+            'staff'      => $staff,
+            'pengaturan' => $pengaturan
         ];
 
         return view('panel/cetak_kartu', $data);

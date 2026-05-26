@@ -1,6 +1,40 @@
+<?php
+
+/**
+ * @var array  $siswa
+ * @var string $search
+ * @var int    $currentPage
+ * @var int    $totalPages
+ * @var int    $totalData
+ * @var array  $ruangan
+ * @var string $sortCol
+ * @var string $sortDir
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>
+
+<style>
+    .progress-striped {
+        background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.25) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0.25) 75%, transparent 75%, transparent);
+        background-size: 1.5rem 1.5rem;
+    }
+
+    .animate-stripes {
+        animation: progress-stripes 1s linear infinite;
+    }
+
+    @keyframes progress-stripes {
+        from {
+            background-position: 1.5rem 0;
+        }
+
+        to {
+            background-position: 0 0;
+        }
+    }
+</style>
 
 <div class="mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
     <div>
@@ -8,7 +42,11 @@
         <p class="text-slate-500 text-sm mt-1">Kelola data peserta ujian dan kelas.</p>
     </div>
 
-    <div class="flex gap-2 w-full lg:w-auto">
+    <div class="flex flex-wrap gap-2 w-full lg:w-auto">
+        <button id="btnBulkDelete" onclick="konfirmasiHapusBatch()" class="hidden flex-1 lg:flex-none justify-center bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm transition shadow items-center animate-pulse">
+            <span class="mr-2">🗑️</span> Hapus Terpilih (<span id="countSelected">0</span>)
+        </button>
+
         <button onclick="bukaModalSiswa()" class="flex-1 lg:flex-none justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm transition shadow flex items-center">
             <span class="mr-2">➕</span> Tambah Manual
         </button>
@@ -20,6 +58,9 @@
 
 <div class="bg-white p-4 rounded-t-xl border border-slate-200 border-b-0 flex justify-between items-center">
     <form action="/panel/siswa" method="GET" class="flex w-full md:w-auto gap-2">
+        <input type="hidden" name="sort" value="<?= esc($sortCol) ?>">
+        <input type="hidden" name="dir" value="<?= esc($sortDir) ?>">
+
         <input type="text" name="search" value="<?= esc($search) ?>" placeholder="Cari NISN atau Nama..." class="w-full md:w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
         <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2 rounded-lg text-sm font-semibold transition shadow-sm">Cari</button>
         <?php if (!empty($search)): ?>
@@ -33,23 +74,63 @@
         <table class="w-full text-left text-sm text-slate-600 table-fixed min-w-[800px]">
             <thead class="bg-slate-100 text-slate-800 font-semibold uppercase text-[11px] tracking-wider border-b border-slate-200">
                 <tr>
+                    <th class="px-4 py-3 text-center w-12">
+                        <input type="checkbox" id="checkAll" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition">
+                    </th>
                     <th class="px-4 py-3 text-center w-14">No</th>
-                    <th class="px-4 py-3 w-56">NISN / Akun</th>
-                    <th class="px-4 py-3">Nama Lengkap</th>
-                    <th class="px-4 py-3 text-center w-40">Kelas</th>
+
+                    <?php $dirNisn = ($sortCol == 'nisn' && $sortDir == 'ASC') ? 'DESC' : 'ASC'; ?>
+                    <th class="px-4 py-3 w-56 cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.location='?page=1&search=<?= urlencode($search) ?>&sort=nisn&dir=<?= $dirNisn ?>'" title="Urutkan berdasarkan NISN">
+                        <div class="flex items-center justify-between">
+                            <span>NISN / Akun</span>
+                            <?php if ($sortCol == 'nisn'): ?>
+                                <span class="text-blue-600 text-xs"><?= $sortDir == 'ASC' ? '▲' : '▼' ?></span>
+                            <?php else: ?>
+                                <span class="text-slate-300 text-xs">↕</span>
+                            <?php endif; ?>
+                        </div>
+                    </th>
+
+                    <?php $dirNama = ($sortCol == 'nama' && $sortDir == 'ASC') ? 'DESC' : 'ASC'; ?>
+                    <th class="px-4 py-3 cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.location='?page=1&search=<?= urlencode($search) ?>&sort=nama&dir=<?= $dirNama ?>'" title="Urutkan berdasarkan Nama">
+                        <div class="flex items-center justify-between">
+                            <span>Nama Lengkap</span>
+                            <?php if ($sortCol == 'nama'): ?>
+                                <span class="text-blue-600 text-xs"><?= $sortDir == 'ASC' ? '▲' : '▼' ?></span>
+                            <?php else: ?>
+                                <span class="text-slate-300 text-xs">↕</span>
+                            <?php endif; ?>
+                        </div>
+                    </th>
+
+                    <?php $dirKelas = ($sortCol == 'kelas' && $sortDir == 'ASC') ? 'DESC' : 'ASC'; ?>
+                    <th class="px-4 py-3 text-center w-40 cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.location='?page=1&search=<?= urlencode($search) ?>&sort=kelas&dir=<?= $dirKelas ?>'" title="Urutkan berdasarkan Kelas">
+                        <div class="flex items-center justify-center gap-2">
+                            <span>Kelas</span>
+                            <?php if ($sortCol == 'kelas'): ?>
+                                <span class="text-blue-600 text-xs"><?= $sortDir == 'ASC' ? '▲' : '▼' ?></span>
+                            <?php else: ?>
+                                <span class="text-slate-300 text-xs">↕</span>
+                            <?php endif; ?>
+                        </div>
+                    </th>
+
                     <th class="px-4 py-3 text-center w-32">Aksi</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-slate-100" id="tableSiswaBody">
                 <?php
                 $no = ($currentPage - 1) * 50 + 1;
                 foreach ($siswa as $s):
                 ?>
                     <tr class="hover:bg-blue-50/50 transition-colors">
+                        <td class="px-4 py-3 text-center">
+                            <input type="checkbox" value="<?= $s['id'] ?>" class="checkItem w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition">
+                        </td>
                         <td class="px-4 py-3 text-center font-medium text-slate-500"><?= $no++ ?></td>
                         <td class="px-4 py-3">
                             <div class="font-bold text-blue-600 text-base"><?= esc($s['nisn']) ?></div>
-                            <div class="text-[10px] text-emerald-600 font-mono mt-0.5">🔑 Enkripsi Aktif</div>
+                            <div class="text-[10px] text-emerald-600 font-mono mt-0.5">🔑 <?= esc($s['password_plain'] ?? 'siswa123') ?></div>
                         </td>
                         <td class="px-4 py-3 font-bold text-slate-800 uppercase tracking-wide truncate pr-4">
                             <?= esc($s['nama_lengkap']) ?>
@@ -81,7 +162,7 @@
 
                 <?php if (empty($siswa)): ?>
                     <tr>
-                        <td colspan="5" class="px-6 py-16 text-center text-slate-500 bg-slate-50">
+                        <td colspan="6" class="px-6 py-16 text-center text-slate-500 bg-slate-50">
                             <span class="text-4xl block mb-3">🔍</span>
                             <p class="font-semibold text-slate-600">Data Siswa Kosong</p>
                             <p class="text-xs text-slate-400 mt-1">Belum ada data atau pencarian tidak ditemukan.</p>
@@ -101,7 +182,7 @@
 
             <div class="flex gap-1.5">
                 <?php if ($currentPage > 1): ?>
-                    <a href="?page=<?= $currentPage - 1 ?>&search=<?= urlencode($search ?? '') ?>" class="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800 font-medium transition shadow-sm">Prev</a>
+                    <a href="?page=<?= $currentPage - 1 ?>&search=<?= urlencode($search ?? '') ?>&sort=<?= $sortCol ?>&dir=<?= $sortDir ?>" class="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800 font-medium transition shadow-sm">Prev</a>
                 <?php endif; ?>
 
                 <?php
@@ -109,18 +190,17 @@
                 $endPage = min($totalPages, $currentPage + 2);
 
                 for ($i = $startPage; $i <= $endPage; $i++):
-                    // Pisahkan logikanya ke dalam variabel agar VS Code tidak bingung
                     $activeClass = ($i == $currentPage)
                         ? 'bg-blue-600 text-white border-blue-600 ring-2 ring-blue-600/20'
                         : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50';
                 ?>
-                    <a href="?page=<?= $i ?>&search=<?= urlencode($search ?? '') ?>" class="px-3 py-1.5 border rounded-md text-sm font-bold transition shadow-sm <?= $activeClass ?>">
+                    <a href="?page=<?= $i ?>&search=<?= urlencode($search ?? '') ?>&sort=<?= $sortCol ?>&dir=<?= $sortDir ?>" class="px-3 py-1.5 border rounded-md text-sm font-bold transition shadow-sm <?= $activeClass ?>">
                         <?= $i ?>
                     </a>
                 <?php endfor; ?>
 
                 <?php if ($currentPage < $totalPages): ?>
-                    <a href="?page=<?= $currentPage + 1 ?>&search=<?= urlencode($search ?? '') ?>" class="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800 font-medium transition shadow-sm">Next</a>
+                    <a href="?page=<?= $currentPage + 1 ?>&search=<?= urlencode($search ?? '') ?>&sort=<?= $sortCol ?>&dir=<?= $sortDir ?>" class="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-800 font-medium transition shadow-sm">Next</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -199,13 +279,13 @@
             <button type="button" onclick="tutupModalImport()" class="text-emerald-100 hover:text-white transition">✖</button>
         </div>
 
-        <form action="/panel/siswa/import" method="POST" enctype="multipart/form-data">
+        <form action="/panel/siswa/import" method="POST" enctype="multipart/form-data" id="formImportSiswa">
             <?= csrf_field() ?>
             <div class="p-6 space-y-4">
                 <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs text-amber-800 leading-relaxed shadow-inner">
                     Siapkan file Excel (.xlsx) Anda. Urutan kolom wajib seperti ini (Tanpa Header / Baris ke-1 langsung data):<br>
-                    <strong class="text-amber-900 mt-2 block font-mono bg-amber-100 p-2 rounded">
-                        A: NISN<br>B: Nama Lengkap<br>C: Tingkat (Misal X)<br>D: Jurusan (Misal IPA)<br>E: Rombel (Misal 1)
+                    <strong class="text-amber-900 mt-2 block font-mono bg-amber-100 p-2 rounded leading-loose">
+                        A: NISN<br>B: Nama Lengkap<br>C: Tingkat (Misal X)<br>D: Jurusan (Misal IPA)<br>E: Rombel (Misal 1)<br>F: Password <span class="text-[10px] text-amber-600 font-sans font-bold">(Opsional, default siswa123)</span>
                     </strong>
                 </div>
 
@@ -217,7 +297,7 @@
 
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
                 <button type="button" onclick="tutupModalImport()" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-semibold hover:bg-slate-200 transition">Batal</button>
-                <button type="submit" onclick="this.innerHTML='Memproses...'" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md transition flex items-center">
+                <button type="submit" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md transition flex items-center">
                     🚀 Upload & Import
                 </button>
             </div>
@@ -300,6 +380,265 @@
         }).then((result) => {
             if (result.isConfirmed) document.getElementById('formDelete' + id).submit();
         })
+    }
+
+    const checkAll = document.getElementById('checkAll');
+    const checkItems = document.querySelectorAll('.checkItem');
+    const btnBulkDelete = document.getElementById('btnBulkDelete');
+    const countSelected = document.getElementById('countSelected');
+
+    function updateBulkDeleteUI() {
+        const selectedCount = document.querySelectorAll('.checkItem:checked').length;
+        countSelected.innerText = selectedCount;
+
+        if (selectedCount > 0) {
+            btnBulkDelete.classList.remove('hidden');
+            btnBulkDelete.classList.add('flex');
+        } else {
+            btnBulkDelete.classList.add('hidden');
+            btnBulkDelete.classList.remove('flex');
+        }
+
+        if (checkItems.length > 0) {
+            checkAll.checked = selectedCount === checkItems.length;
+        }
+    }
+
+    if (checkAll) {
+        checkAll.addEventListener('change', function() {
+            checkItems.forEach(item => item.checked = this.checked);
+            updateBulkDeleteUI();
+        });
+    }
+
+    checkItems.forEach(item => {
+        item.addEventListener('change', updateBulkDeleteUI);
+    });
+
+    function konfirmasiHapusBatch() {
+        const selectedIds = Array.from(document.querySelectorAll('.checkItem:checked')).map(cb => cb.value);
+
+        if (selectedIds.length === 0) return;
+
+        Swal.fire({
+            title: `Hapus ${selectedIds.length} Siswa?`,
+            text: "Data yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Hapus Semua!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Menghapus...',
+                    text: 'Mohon tunggu sebentar.',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                try {
+                    let formData = new window.FormData();
+                    selectedIds.forEach(id => formData.append('ids[]', id));
+
+                    let res = await fetch('/panel/siswa/delete-batch', {
+                        method: 'POST',
+                        body: formData
+                    }).then(r => r.json());
+
+                    if (res.csrf) {
+                        document.querySelector('meta[name="csrf-token"]').setAttribute('content', res.csrf);
+                    }
+
+                    if (res.status === 'success') {
+                        Swal.fire('Berhasil!', res.message, 'success').then(() => window.location.reload());
+                    } else {
+                        Swal.fire('Gagal!', res.message || 'Terjadi kesalahan.', 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Gagal!', 'Kesalahan koneksi jaringan.', 'error');
+                }
+            }
+        });
+    }
+
+    const formImportSiswa = document.getElementById('formImportSiswa');
+    if (formImportSiswa) {
+        formImportSiswa.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const fileInput = document.querySelector('input[name="file_excel"]');
+            if (!fileInput.files.length) return;
+
+            tutupModalImport();
+
+            Swal.fire({
+                title: 'Sedang Memproses',
+                html: `
+                    <div class="mt-4 text-left font-sans">
+                        <div class="mb-2 text-sm font-bold text-slate-700 flex justify-between">
+                            <span id="importStatusText" class="flex items-center text-blue-600">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Membaca file Excel...
+                            </span>
+                            <span id="importProgressPercent" class="text-blue-600">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-4 mb-2 overflow-hidden border border-slate-300 shadow-inner relative">
+                            <div id="importProgressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-500 ease-out relative progress-striped animate-stripes shadow-[0_0_10px_rgba(37,99,235,0.5)]" style="width: 0%"></div>
+                        </div>
+                        <div class="text-xs text-slate-500 font-medium text-right mb-5 border-b border-slate-200 pb-3">
+                            <span id="importProgressCount">0 / 0 Baris</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 text-sm text-center">
+                            <div class="bg-emerald-50 text-emerald-700 py-2 rounded-lg border border-emerald-200 font-bold shadow-sm">
+                                ✅ Sukses: <span id="importSuccessCount" class="text-lg">0</span>
+                            </div>
+                            <div class="bg-amber-50 text-amber-700 py-2 rounded-lg border border-amber-200 font-bold shadow-sm flex flex-col justify-center">
+                                <span>⚠️ Gagal/Duplikat</span>
+                                <span id="importFailCount" class="text-lg">0</span>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: async () => {
+                    const updateCsrf = (hash) => {
+                        if (hash) document.querySelector('meta[name="csrf-token"]').setAttribute('content', hash);
+                    };
+
+                    let formData = new window.FormData();
+                    formData.append('file_excel', fileInput.files[0]);
+                    formData.append('step', 'init');
+
+                    try {
+                        let resInit = await fetch('/panel/siswa/import', {
+                            method: 'POST',
+                            body: formData
+                        }).then(res => res.json());
+                        updateCsrf(resInit.csrf);
+
+                        if (resInit.status === 'error') {
+                            Swal.fire('Gagal!', resInit.message, 'error');
+                            return;
+                        }
+
+                        const totalRows = resInit.total;
+                        const tempId = resInit.temp_id;
+                        const chunkSize = 10;
+
+                        let totalSuccess = 0;
+                        let totalFailed = 0;
+
+                        document.getElementById('importProgressCount').innerText = `0 / ${totalRows} Baris`;
+
+                        for (let offset = 0; offset < totalRows; offset += chunkSize) {
+
+                            if (offset > 0) {
+                                document.getElementById('importStatusText').innerHTML = `
+                                    <span class="text-amber-500 flex items-center font-bold">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Jeda 1 detik (Cooling down)...
+                                    </span>
+                                `;
+
+                                await new window.Promise(r => setTimeout(r, 1000));
+
+                                document.getElementById('importStatusText').innerHTML = `
+                                    <span class="text-blue-600 flex items-center font-bold">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Memproses baris ${offset + 1} - ${Math.min(offset + chunkSize, totalRows)}...
+                                    </span>
+                                `;
+                            } else {
+                                document.getElementById('importStatusText').innerHTML = `
+                                    <span class="text-blue-600 flex items-center font-bold">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Memulai injeksi data...
+                                    </span>
+                                `;
+                            }
+
+                            let chunkData = new window.FormData();
+                            chunkData.append('step', 'process');
+                            chunkData.append('temp_id', tempId);
+                            chunkData.append('offset', offset);
+                            chunkData.append('limit', chunkSize);
+
+                            let resProcess = await fetch('/panel/siswa/import', {
+                                method: 'POST',
+                                body: chunkData
+                            }).then(res => res.json());
+                            updateCsrf(resProcess.csrf);
+
+                            if (resProcess.status === 'error') {
+                                Swal.fire('Error Chunking!', resProcess.message, 'error');
+                                return;
+                            }
+
+                            totalSuccess += resProcess.sukses;
+                            totalFailed += resProcess.gagal;
+
+                            let currentProcessed = Math.min(offset + chunkSize, totalRows);
+                            let percent = Math.round((currentProcessed / totalRows) * 100);
+
+                            document.getElementById('importProgressBar').style.width = percent + '%';
+                            document.getElementById('importProgressPercent').innerText = percent + '%';
+                            document.getElementById('importProgressCount').innerText = `${currentProcessed} / ${totalRows} Baris`;
+                            document.getElementById('importSuccessCount').innerText = totalSuccess;
+                            document.getElementById('importFailCount').innerText = totalFailed;
+                        }
+
+                        document.getElementById('importStatusText').innerHTML = `
+                            <span class="text-emerald-600 flex items-center font-bold">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Membersihkan data temporari...
+                            </span>
+                        `;
+
+                        let finishData = new window.FormData();
+                        finishData.append('step', 'finish');
+                        finishData.append('temp_id', tempId);
+
+                        let resFinish = await fetch('/panel/siswa/import', {
+                            method: 'POST',
+                            body: finishData
+                        }).then(res => res.json());
+                        updateCsrf(resFinish.csrf);
+
+                        Swal.fire({
+                            title: 'Selesai!',
+                            html: `<div class="text-sm">Proses import batch berhasil dirampungkan secara aman.</div>`,
+                            icon: 'success',
+                            confirmButtonText: 'Tutup & Muat Ulang Halaman'
+                        }).then(() => {
+                            window.location.reload();
+                        });
+
+                    } catch (err) {
+                        Swal.fire('Terjadi Kesalahan', 'Gagal memproses jaringan. Periksa log console Anda.', 'error');
+                        console.error(err);
+                    }
+                }
+            });
+        });
     }
 </script>
 <?= $this->endSection() ?>

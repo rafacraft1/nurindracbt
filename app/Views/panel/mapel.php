@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @var array $mapel
+ * @var array $semua_guru
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>
@@ -26,7 +33,7 @@
                     <th class="px-6 py-4 w-16 text-center">No</th>
                     <th class="px-6 py-4 w-1/4">Mata Pelajaran</th>
                     <th class="px-6 py-4">Guru Pengampu</th>
-                    <th class="px-6 py-4 w-40 text-center">Aksi</th>
+                    <th class="px-6 py-4 w-48 text-center">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -38,7 +45,6 @@
                             <div class="font-bold text-slate-800 uppercase"><?= esc($m['nama_mapel']) ?></div>
 
                             <?php
-                            // Ekstrak class ke variabel agar Tailwind IntelliSense di VS Code tidak error/bingung
                             $badgePgClass = $m['total_pg'] > 0
                                 ? 'bg-blue-50 text-blue-700 border-blue-200'
                                 : 'bg-slate-100 text-slate-400 border-slate-200';
@@ -72,10 +78,17 @@
                         <td class="px-6 py-4 text-center">
                             <div class="flex items-center justify-center gap-2">
                                 <button type="button"
+                                    onclick='bukaModalEdit(<?= $m['id'] ?>, "<?= esc($m['nama_mapel']) ?>")'
+                                    class="p-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-md transition" title="Edit Mapel">
+                                    ✏️
+                                </button>
+
+                                <button type="button"
                                     onclick='bukaModalRelasi(<?= $m['id'] ?>, <?= json_encode(array_column($m['guru_pengampu'], 'id')) ?>, "<?= esc($m['nama_mapel']) ?>")'
                                     class="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-md transition" title="Atur Guru Pengampu">
                                     ⚙️
                                 </button>
+
                                 <form action="/panel/mapel/delete/<?= $m['id'] ?>" method="POST" class="inline-block" id="formDelete<?= $m['id'] ?>">
                                     <?= csrf_field() ?>
                                     <button type="button" onclick="konfirmasiHapus(<?= $m['id'] ?>)" class="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition" title="Hapus Mapel">
@@ -94,6 +107,27 @@
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<div id="modalEdit" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 backdrop-blur-sm transition-opacity opacity-0">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform scale-95 transition-transform" id="modalEditContent">
+        <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
+            <h3 class="font-bold text-white">Edit Mata Pelajaran</h3>
+            <button type="button" onclick="tutupModalEdit()" class="text-slate-400 hover:text-white transition">✖</button>
+        </div>
+        <form id="formEditMapel" action="" method="POST">
+            <?= csrf_field() ?>
+            <div class="p-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Nama Mata Pelajaran</label>
+                <input type="text" name="nama_mapel" id="inputEditNamaMapel" required
+                    class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none w-full text-sm">
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+                <button type="button" onclick="tutupModalEdit()" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg shadow transition font-medium">Simpan Perubahan</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -134,24 +168,21 @@
 
 <?= $this->section('scripts') ?>
 <script>
+    // --- Logic Modal Relasi ---
     const modal = document.getElementById('modalRelasi');
     const modalContent = document.getElementById('modalContent');
 
     function bukaModalRelasi(mapelId, guruTerpilih, namaMapel) {
-        // Set Data ke Modal
         document.getElementById('inputMapelId').value = mapelId;
         document.getElementById('labelNamaMapel').innerText = namaMapel;
 
-        // Reset semua checkbox
         document.querySelectorAll('.guru-checkbox').forEach(cb => cb.checked = false);
 
-        // Centang guru yang sudah ada di database
         guruTerpilih.forEach(gId => {
             const cb = document.querySelector(`.guru-checkbox[value="${gId}"]`);
             if (cb) cb.checked = true;
         });
 
-        // Tampilkan animasi Modal
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         setTimeout(() => {
@@ -169,6 +200,33 @@
         }, 300);
     }
 
+    // --- Logic Modal Edit ---
+    const modalEdit = document.getElementById('modalEdit');
+    const modalEditContent = document.getElementById('modalEditContent');
+    const formEditMapel = document.getElementById('formEditMapel');
+
+    function bukaModalEdit(id, namaMapel) {
+        document.getElementById('inputEditNamaMapel').value = namaMapel;
+        formEditMapel.action = `/panel/mapel/update/${id}`;
+
+        modalEdit.classList.remove('hidden');
+        modalEdit.classList.add('flex');
+        setTimeout(() => {
+            modalEdit.classList.remove('opacity-0');
+            modalEditContent.classList.remove('scale-95');
+        }, 10);
+    }
+
+    function tutupModalEdit() {
+        modalEdit.classList.add('opacity-0');
+        modalEditContent.classList.add('scale-95');
+        setTimeout(() => {
+            modalEdit.classList.add('hidden');
+            modalEdit.classList.remove('flex');
+        }, 300);
+    }
+
+    // --- Logic Hapus ---
     function konfirmasiHapus(id) {
         Swal.fire({
             title: 'Hapus Mata Pelajaran?',

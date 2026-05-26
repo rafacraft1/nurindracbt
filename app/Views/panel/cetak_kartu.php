@@ -1,3 +1,11 @@
+<?php
+
+/**
+ * @var array $siswa
+ * @var array $staff
+ * @var array|null $pengaturan
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>
@@ -77,12 +85,18 @@
             <div class="kartu-item border-2 border-slate-800 rounded-lg p-3 bg-white relative">
 
                 <div class="flex items-center border-b-2 border-slate-800 pb-2 mb-2">
-                    <div class="w-10 h-10 border border-slate-400 flex items-center justify-center mr-3 rounded-full shrink-0">
-                        <span class="text-[8px] text-slate-500">LOGO</span>
+                    <div class="w-10 h-10 border border-slate-400 flex items-center justify-center mr-3 rounded-full shrink-0 overflow-hidden bg-white">
+                        <?php if (!empty($pengaturan['logo'])): ?>
+                            <img src="<?= base_url('uploads/' . $pengaturan['logo']) ?>" alt="Logo" class="w-full h-full object-contain p-1">
+                        <?php else: ?>
+                            <span class="text-[8px] text-slate-500 font-bold">LOGO</span>
+                        <?php endif; ?>
                     </div>
                     <div class="leading-tight">
                         <h2 class="font-bold text-sm uppercase text-slate-800">Kartu Login CBT</h2>
-                        <p class="text-[10px] text-slate-600">Ujian Berbasis Komputer & Smartphone</p>
+                        <p class="text-[10px] text-slate-600">
+                            <?= esc($pengaturan['nama_sekolah'] ?? 'Ujian Berbasis Komputer & Smartphone') ?>
+                        </p>
                     </div>
                 </div>
 
@@ -123,7 +137,7 @@
                             <tr>
                                 <td class="font-bold py-0.5 text-red-600">Password</td>
                                 <td class="font-bold text-red-600">:</td>
-                                <td class="font-mono font-bold text-red-600 text-xs">siswa123 <span class="text-[8px] text-slate-400 font-normal">(Default)</span></td>
+                                <td class="font-mono font-bold text-red-600 text-xs"><?= esc($s['password_plain'] ?? 'siswa123') ?></td>
                             </tr>
                         </table>
                     </div>
@@ -157,7 +171,12 @@
                     $roleText = 'Panitia Ujian';
                 }
                 ?>
-                <div class="<?= $bgClass ?> text-white p-3 border-b-2 border-slate-800">
+                <div class="<?= $bgClass ?> text-white p-3 border-b-2 border-slate-800 flex justify-center items-center gap-2">
+                    <?php if (!empty($pengaturan['logo'])): ?>
+                        <div class="w-5 h-5 bg-white rounded-full overflow-hidden flex items-center justify-center shrink-0">
+                            <img src="<?= base_url('uploads/' . $pengaturan['logo']) ?>" alt="Logo" class="w-full h-full object-contain p-[2px]">
+                        </div>
+                    <?php endif; ?>
                     <h2 class="font-bold text-xs uppercase tracking-wider">ID CARD STAFF</h2>
                 </div>
 
@@ -193,12 +212,10 @@
             el.classList.remove('active-print', 'block');
         });
 
-        // 2. Tampilkan tab yang dipilih (tambah class active-print agar CSS @media print tahu mana yang harus diprint)
         const targetTab = document.getElementById('tab-' + tabId);
         targetTab.classList.remove('hidden');
         targetTab.classList.add('active-print', 'block');
 
-        // 3. Update styling tombol tab
         const btnSiswa = document.getElementById('btn-tab-siswa');
         const btnStaff = document.getElementById('btn-tab-staff');
 
