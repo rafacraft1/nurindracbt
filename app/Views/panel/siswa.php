@@ -309,6 +309,129 @@
 
 <?= $this->section('scripts') ?>
 <script>
+    // ==========================================
+    // MANAJEMEN CHECKBOX (PERSISTENT LINTAS PAGE)
+    // ==========================================
+    let selectedIds = JSON.parse(sessionStorage.getItem('selectedSiswaIds')) || [];
+
+    const checkAll = document.getElementById('checkAll');
+    const checkItems = document.querySelectorAll('.checkItem');
+    const btnBulkDelete = document.getElementById('btnBulkDelete');
+    const countSelected = document.getElementById('countSelected');
+
+    function saveCheckboxState() {
+        sessionStorage.setItem('selectedSiswaIds', JSON.stringify(selectedIds));
+        updateBulkDeleteUI();
+    }
+
+    function updateBulkDeleteUI() {
+        countSelected.innerText = selectedIds.length;
+
+        if (selectedIds.length > 0) {
+            btnBulkDelete.classList.remove('hidden');
+            btnBulkDelete.classList.add('flex');
+        } else {
+            btnBulkDelete.classList.add('hidden');
+            btnBulkDelete.classList.remove('flex');
+        }
+
+        // Cek apakah semua item di halaman INI tercentang
+        if (checkItems.length > 0) {
+            const allCheckedOnPage = Array.from(checkItems).every(item => item.checked);
+            checkAll.checked = allCheckedOnPage;
+        }
+    }
+
+    // Inisialisasi saat DOM dimuat
+    checkItems.forEach(item => {
+        // Restore status centang jika ID ada di array session
+        if (selectedIds.includes(item.value)) {
+            item.checked = true;
+        }
+
+        // Listener jika di klik manual per item
+        item.addEventListener('change', function() {
+            if (this.checked) {
+                if (!selectedIds.includes(this.value)) selectedIds.push(this.value);
+            } else {
+                selectedIds = selectedIds.filter(id => id !== this.value);
+            }
+            saveCheckboxState();
+        });
+    });
+
+    // Panggil update UI pertama kali halaman diload
+    updateBulkDeleteUI();
+
+    // Listener Check All (Hanya mempengaruhi yang tampil di DOM / Halaman Saat Ini)
+    if (checkAll) {
+        checkAll.addEventListener('change', function() {
+            const isChecked = this.checked;
+
+            checkItems.forEach(item => {
+                item.checked = isChecked;
+                if (isChecked) {
+                    if (!selectedIds.includes(item.value)) selectedIds.push(item.value);
+                } else {
+                    selectedIds = selectedIds.filter(id => id !== item.value);
+                }
+            });
+            saveCheckboxState();
+        });
+    }
+
+    function konfirmasiHapusBatch() {
+        if (selectedIds.length === 0) return;
+
+        Swal.fire({
+            title: `Hapus ${selectedIds.length} Siswa?`,
+            text: "Data yang dihapus tidak dapat dikembalikan!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Hapus Semua!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Menghapus...',
+                    text: 'Mohon tunggu sebentar.',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                try {
+                    let formData = new window.FormData();
+                    selectedIds.forEach(id => formData.append('ids[]', id));
+
+                    let res = await fetch('/panel/siswa/delete-batch', {
+                        method: 'POST',
+                        body: formData
+                    }).then(r => r.json());
+
+                    if (res.csrf) {
+                        document.querySelector('meta[name="csrf-token"]').setAttribute('content', res.csrf);
+                    }
+
+                    if (res.status === 'success') {
+                        // Bersihkan session storage karena data sudah terhapus
+                        sessionStorage.removeItem('selectedSiswaIds');
+                        Swal.fire('Berhasil!', res.message, 'success').then(() => window.location.reload());
+                    } else {
+                        Swal.fire('Gagal!', res.message || 'Terjadi kesalahan.', 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('Gagal!', 'Kesalahan koneksi jaringan.', 'error');
+                }
+            }
+        });
+    }
+
+
+    // ==========================================
+    // MANAJEMEN MODAL DAN FUNGSI LAINNYA
+    // ==========================================
     const mSiswa = document.getElementById('modalSiswa');
     const cSiswa = document.getElementById('modalSiswaContent');
     const fSiswa = document.getElementById('formSiswa');
@@ -382,87 +505,9 @@
         })
     }
 
-    const checkAll = document.getElementById('checkAll');
-    const checkItems = document.querySelectorAll('.checkItem');
-    const btnBulkDelete = document.getElementById('btnBulkDelete');
-    const countSelected = document.getElementById('countSelected');
-
-    function updateBulkDeleteUI() {
-        const selectedCount = document.querySelectorAll('.checkItem:checked').length;
-        countSelected.innerText = selectedCount;
-
-        if (selectedCount > 0) {
-            btnBulkDelete.classList.remove('hidden');
-            btnBulkDelete.classList.add('flex');
-        } else {
-            btnBulkDelete.classList.add('hidden');
-            btnBulkDelete.classList.remove('flex');
-        }
-
-        if (checkItems.length > 0) {
-            checkAll.checked = selectedCount === checkItems.length;
-        }
-    }
-
-    if (checkAll) {
-        checkAll.addEventListener('change', function() {
-            checkItems.forEach(item => item.checked = this.checked);
-            updateBulkDeleteUI();
-        });
-    }
-
-    checkItems.forEach(item => {
-        item.addEventListener('change', updateBulkDeleteUI);
-    });
-
-    function konfirmasiHapusBatch() {
-        const selectedIds = Array.from(document.querySelectorAll('.checkItem:checked')).map(cb => cb.value);
-
-        if (selectedIds.length === 0) return;
-
-        Swal.fire({
-            title: `Hapus ${selectedIds.length} Siswa?`,
-            text: "Data yang dihapus tidak dapat dikembalikan!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Ya, Hapus Semua!'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: 'Menghapus...',
-                    text: 'Mohon tunggu sebentar.',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    didOpen: () => Swal.showLoading()
-                });
-
-                try {
-                    let formData = new window.FormData();
-                    selectedIds.forEach(id => formData.append('ids[]', id));
-
-                    let res = await fetch('/panel/siswa/delete-batch', {
-                        method: 'POST',
-                        body: formData
-                    }).then(r => r.json());
-
-                    if (res.csrf) {
-                        document.querySelector('meta[name="csrf-token"]').setAttribute('content', res.csrf);
-                    }
-
-                    if (res.status === 'success') {
-                        Swal.fire('Berhasil!', res.message, 'success').then(() => window.location.reload());
-                    } else {
-                        Swal.fire('Gagal!', res.message || 'Terjadi kesalahan.', 'error');
-                    }
-                } catch (error) {
-                    Swal.fire('Gagal!', 'Kesalahan koneksi jaringan.', 'error');
-                }
-            }
-        });
-    }
-
+    // ==========================================
+    // IMPORT EXCEL
+    // ==========================================
     const formImportSiswa = document.getElementById('formImportSiswa');
     if (formImportSiswa) {
         formImportSiswa.addEventListener('submit', async function(e) {
@@ -483,7 +528,7 @@
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Membaca file Excel...
+                                Sinkronisasi Data...
                             </span>
                             <span id="importProgressPercent" class="text-blue-600">0%</span>
                         </div>
@@ -491,14 +536,14 @@
                             <div id="importProgressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-500 ease-out relative progress-striped animate-stripes shadow-[0_0_10px_rgba(37,99,235,0.5)]" style="width: 0%"></div>
                         </div>
                         <div class="text-xs text-slate-500 font-medium text-right mb-5 border-b border-slate-200 pb-3">
-                            <span id="importProgressCount">0 / 0 Baris</span>
+                            <span id="importProgressCount">0 / 0</span>
                         </div>
                         <div class="grid grid-cols-2 gap-3 text-sm text-center">
                             <div class="bg-emerald-50 text-emerald-700 py-2 rounded-lg border border-emerald-200 font-bold shadow-sm">
                                 ✅ Sukses: <span id="importSuccessCount" class="text-lg">0</span>
                             </div>
                             <div class="bg-amber-50 text-amber-700 py-2 rounded-lg border border-amber-200 font-bold shadow-sm flex flex-col justify-center">
-                                <span>⚠️ Gagal/Duplikat</span>
+                                <span>⚠️ Gagal</span>
                                 <span id="importFailCount" class="text-lg">0</span>
                             </div>
                         </div>
@@ -530,49 +575,14 @@
 
                         const totalRows = resInit.total;
                         const tempId = resInit.temp_id;
-                        const chunkSize = 10;
+                        const chunkSize = 1;
 
                         let totalSuccess = 0;
                         let totalFailed = 0;
 
-                        document.getElementById('importProgressCount').innerText = `0 / ${totalRows} Baris`;
+                        document.getElementById('importProgressCount').innerText = `0 / ${totalRows}`;
 
                         for (let offset = 0; offset < totalRows; offset += chunkSize) {
-
-                            if (offset > 0) {
-                                document.getElementById('importStatusText').innerHTML = `
-                                    <span class="text-amber-500 flex items-center font-bold">
-                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Jeda 1 detik (Cooling down)...
-                                    </span>
-                                `;
-
-                                await new window.Promise(r => setTimeout(r, 1000));
-
-                                document.getElementById('importStatusText').innerHTML = `
-                                    <span class="text-blue-600 flex items-center font-bold">
-                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Memproses baris ${offset + 1} - ${Math.min(offset + chunkSize, totalRows)}...
-                                    </span>
-                                `;
-                            } else {
-                                document.getElementById('importStatusText').innerHTML = `
-                                    <span class="text-blue-600 flex items-center font-bold">
-                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Memulai injeksi data...
-                                    </span>
-                                `;
-                            }
-
                             let chunkData = new window.FormData();
                             chunkData.append('step', 'process');
                             chunkData.append('temp_id', tempId);
@@ -598,7 +608,7 @@
 
                             document.getElementById('importProgressBar').style.width = percent + '%';
                             document.getElementById('importProgressPercent').innerText = percent + '%';
-                            document.getElementById('importProgressCount').innerText = `${currentProcessed} / ${totalRows} Baris`;
+                            document.getElementById('importProgressCount').innerText = `${currentProcessed} / ${totalRows}`;
                             document.getElementById('importSuccessCount').innerText = totalSuccess;
                             document.getElementById('importFailCount').innerText = totalFailed;
                         }
@@ -623,10 +633,20 @@
                         }).then(res => res.json());
                         updateCsrf(resFinish.csrf);
 
+                        let finishHTML = '';
+                        let iconAlert = 'success';
+
+                        if (totalFailed > 0) {
+                            finishHTML = `<div class="text-sm text-left">Proses import selesai dengan beberapa kendala.<br><br><b>✅ Sukses:</b> ${totalSuccess} data berhasil.<br><b>⚠️ Gagal / Duplikat:</b> ${totalFailed} data ditolak.</div>`;
+                            iconAlert = 'warning';
+                        } else {
+                            finishHTML = `<div class="text-sm text-left"><b>🎉 100% Sukses!</b><br><br>Sebanyak <b>${totalSuccess}</b> data berhasil diimport ke sistem tanpa ada yang gagal.</div>`;
+                        }
+
                         Swal.fire({
                             title: 'Selesai!',
-                            html: `<div class="text-sm">Proses import batch berhasil dirampungkan secara aman.</div>`,
-                            icon: 'success',
+                            html: finishHTML,
+                            icon: iconAlert,
                             confirmButtonText: 'Tutup & Muat Ulang Halaman'
                         }).then(() => {
                             window.location.reload();
