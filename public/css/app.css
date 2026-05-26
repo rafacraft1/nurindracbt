@@ -1162,6 +1162,10 @@ video {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.grid-cols-\[40px\2c 5px\2c 1fr\] {
+  grid-template-columns: 40px 5px 1fr;
+}
+
 .flex-col {
   flex-direction: column;
 }
@@ -2049,6 +2053,10 @@ video {
 .text-xs {
   font-size: 0.75rem;
   line-height: 1rem;
+}
+
+.text-\[6px\] {
+  font-size: 6px;
 }
 
 .font-black {
