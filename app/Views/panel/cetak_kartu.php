@@ -18,7 +18,11 @@
             margin: 10mm;
         }
 
+        /* Tambahkan ini untuk memastikan body tidak menahan page break */
+        html,
         body {
+            height: auto !important;
+            overflow: visible !important;
             background-color: white !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -44,16 +48,35 @@
             display: none !important;
         }
 
-        /* Mencegah kartu terpotong di tengah halaman */
+        /* Mencegah kartu terpotong dengan Float (Paling stabil di Chrome) */
         .kartu-item {
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid !important;
+            float: left !important;
+            /* Gunakan float, bukan inline-block */
+            width: calc(50% - 0.5rem) !important;
+            margin-bottom: 1rem !important;
         }
 
-        /* Paksa grid menjadi 2 kolom di kertas A4 */
+        /* Spasi antar kolom */
+        .kartu-item:nth-child(odd) {
+            margin-right: 1rem !important;
+        }
+
+        .kartu-item:nth-child(even) {
+            margin-right: 0 !important;
+        }
+
+        /* Paksa block dan tambahkan Clearfix karena menggunakan float */
         .print-grid {
-            display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 0.5rem !important;
+            display: block !important;
+        }
+
+        .print-grid::after {
+            content: "";
+            display: table;
+            clear: both;
         }
     }
 </style>
