@@ -742,14 +742,49 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('error', 'Gagal menulis file JSON. Pastikan folder public/data_soal memiliki izin tulis (chmod 777).');
     }
 
+    // =========================================================
+    // FUNGSI CETAK KARTU YANG SUDAH DIREVISI
+    // =========================================================
     public function cetakKartu()
     {
-        $siswa = $this->db->table('siswa')
+        // 1. Ambil data untuk Filter Dropdown (Tingkat, Jurusan, Rombel)
+        $tingkat = $this->db->table('siswa')->select('tingkat')->distinct()->orderBy('tingkat', 'ASC')->get()->getResultArray();
+        $jurusan = $this->db->table('siswa')->select('jurusan')->distinct()->orderBy('jurusan', 'ASC')->get()->getResultArray();
+        $rombel  = $this->db->table('siswa')->select('rombel')->distinct()->orderBy('rombel', 'ASC')->get()->getResultArray();
+
+        // 2. Tangkap parameter filter GET
+        $filterTingkat = $this->request->getGet('tingkat');
+        $filterJurusan = $this->request->getGet('jurusan');
+        $filterRombel  = $this->request->getGet('rombel');
+        $cetakIds      = $this->request->getGet('cetak_ids'); // Parameter ID untuk cetak spesifik
+
+        // 3. Query Builder Siswa
+        $builderSiswa = $this->db->table('siswa')
             ->select('siswa.*, ruangan.nama_ruangan')
             ->join('ruangan', 'ruangan.id = siswa.ruangan_id', 'left')
-            ->orderBy('ruangan.nama_ruangan', 'ASC')
-            ->orderBy('siswa.nama_lengkap', 'ASC')
-            ->get()->getResultArray();
+            ->orderBy('siswa.tingkat', 'ASC')
+            ->orderBy('siswa.jurusan', 'ASC')
+            ->orderBy('siswa.rombel', 'ASC')
+            ->orderBy('siswa.nama_lengkap', 'ASC');
+
+        // 4. Terapkan Filter (Jika user memilih dropdown)
+        if (!empty($filterTingkat)) {
+            $builderSiswa->where('siswa.tingkat', $filterTingkat);
+        }
+        if (!empty($filterJurusan)) {
+            $builderSiswa->where('siswa.jurusan', $filterJurusan);
+        }
+        if (!empty($filterRombel)) {
+            $builderSiswa->where('siswa.rombel', $filterRombel);
+        }
+
+        // 5. Terapkan Filter Cetak Spesifik (Jika user menceklis kartu)
+        if (!empty($cetakIds)) {
+            $idsArray = explode(',', $cetakIds);
+            $builderSiswa->whereIn('siswa.id', $idsArray);
+        }
+
+        $siswa = $builderSiswa->get()->getResultArray();
 
         $staff = $this->db->table('staff')
             ->orderBy('role', 'ASC')
@@ -759,10 +794,18 @@ class PanitiaController extends BaseController
         $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
 
         $data = [
-            'title'      => 'Cetak Kartu Ujian - CBT PRO',
-            'siswa'      => $siswa,
-            'staff'      => $staff,
-            'pengaturan' => $pengaturan
+            'title'         => 'Cetak Kartu Ujian - CBT PRO',
+            'siswa'         => $siswa,
+            'staff'         => $staff,
+            'pengaturan'    => $pengaturan,
+
+            // Kirim variabel filter ke view
+            'listTingkat'   => $tingkat,
+            'listJurusan'   => $jurusan,
+            'listRombel'    => $rombel,
+            'filterTingkat' => $filterTingkat,
+            'filterJurusan' => $filterJurusan,
+            'filterRombel'  => $filterRombel,
         ];
 
         return view('panel/cetak_kartu', $data);
