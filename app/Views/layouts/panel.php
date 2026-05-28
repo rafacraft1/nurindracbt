@@ -81,6 +81,9 @@ if ($zonaWaktu === 'Asia/Jayapura') $labelZona = 'WIT';
                 <a href="/panel/pengaturan" class="<?= $isActive('panel/pengaturan') ?> flex items-center px-4 py-2.5 rounded-lg transition-all font-medium text-sm">
                     <span class="mr-3 text-lg">⚙️</span> Pengaturan Sistem
                 </a>
+                <a href="/panel/backup-restore" class="<?= $isActive('panel/backup-restore') ?> flex items-center px-4 py-2.5 rounded-lg transition-all font-medium text-sm">
+                    <span class="mr-3 text-lg">💾</span> Backup & Restore
+                </a>
             <?php endif; ?>
 
             <?php if ($role === 'admin' || $isPanitia == 1): ?>

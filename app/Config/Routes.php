@@ -30,6 +30,12 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
     $routes->get('pengaturan', 'AdminController::pengaturan');
     $routes->post('pengaturan/update', 'AdminController::updatePengaturan');
 
+    // Modul Backup & Restore (Admin Only)
+    $routes->get('backup-restore', 'BackupController::index');
+    $routes->get('backup-restore/download/(:segment)', 'BackupController::download/$1');
+    $routes->post('backup-restore/restore', 'BackupController::restore');
+    $routes->post('backup-restore/factory-reset', 'BackupController::factoryReset');
+
     $routes->group('', ['filter' => 'auth:panitia'], static function ($routes) {
 
         $routes->get('siswa', 'SiswaController::index');
