@@ -1,3 +1,11 @@
+<?php
+
+/**
+ * @var array $staff
+ * @var int $totalAdmin
+ * @var int $totalPanitia
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>

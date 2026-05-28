@@ -528,12 +528,19 @@ class PanitiaController extends BaseController
 
     public function jadwal()
     {
+        // FILTER TAHUN AJARAN DAN SEMESTER AKTIF
+        $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+        $thnAktif   = $pengaturan['tahun_ajaran'] ?? '2025/2026';
+        $smtAktif   = $pengaturan['semester'] ?? 'ganjil';
+
         $search  = $this->request->getGet('search');
         $page    = (int)($this->request->getGet('page') ?? 1);
         if ($page < 1) $page = 1;
+
         $sortCol = $this->request->getGet('sort') ?? 'waktu';
         $sortDir = strtoupper($this->request->getGet('dir') ?? 'DESC');
         if (!in_array($sortDir, ['ASC', 'DESC'])) $sortDir = 'DESC';
+
         $allowedSorts = [
             'waktu'   => 'jadwal_ujian.waktu_mulai',
             'mapel'   => 'master_mapel.nama_mapel',
@@ -541,9 +548,14 @@ class PanitiaController extends BaseController
             'status'  => 'jadwal_ujian.status'
         ];
         $dbSortCol = $allowedSorts[$sortCol] ?? 'jadwal_ujian.waktu_mulai';
+
         $perPage = 25;
         $offset  = ($page - 1) * $perPage;
-        $builderCount = $this->db->table('jadwal_ujian');
+
+        $builderCount = $this->db->table('jadwal_ujian')
+            ->where('jadwal_ujian.tahun_ajaran', $thnAktif)
+            ->where('jadwal_ujian.semester', $smtAktif);
+
         if (!empty($search)) {
             $builderCount->join('master_mapel', 'master_mapel.id = jadwal_ujian.mapel_id', 'left');
             $builderCount->groupStart()
@@ -554,12 +566,15 @@ class PanitiaController extends BaseController
         }
         $totalData  = $builderCount->countAllResults();
         $totalPages = ceil($totalData / $perPage);
+
         $builderData = $this->db->table('jadwal_ujian')
             ->select('jadwal_ujian.*, master_jenis_ujian.nama_ujian, master_mapel.nama_mapel, ruangan.nama_ruangan, staff.nama_lengkap as nama_pengawas')
             ->join('master_jenis_ujian', 'master_jenis_ujian.id = jadwal_ujian.jenis_ujian_id', 'left')
             ->join('master_mapel', 'master_mapel.id = jadwal_ujian.mapel_id', 'left')
             ->join('ruangan', 'ruangan.id = jadwal_ujian.ruangan_id', 'left')
-            ->join('staff', 'staff.id = jadwal_ujian.pengawas_id', 'left');
+            ->join('staff', 'staff.id = jadwal_ujian.pengawas_id', 'left')
+            ->where('jadwal_ujian.tahun_ajaran', $thnAktif)
+            ->where('jadwal_ujian.semester', $smtAktif);
 
         if (!empty($search)) {
             $builderData->groupStart()
@@ -571,6 +586,7 @@ class PanitiaController extends BaseController
         $jadwal = $builderData->orderBy($dbSortCol, $sortDir)
             ->limit($perPage, $offset)
             ->get()->getResultArray();
+
         $currentTime = time();
         foreach ($jadwal as &$j) {
             if ($j['status'] === 'active') {
@@ -618,6 +634,11 @@ class PanitiaController extends BaseController
 
     public function storeJadwal()
     {
+        // AMBIL TAHUN AJARAN DAN SEMESTER AKTIF UNTUK DITEMPELKAN KE DATA BARU
+        $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+        $thnAktif   = $pengaturan['tahun_ajaran'] ?? '2025/2026';
+        $smtAktif   = $pengaturan['semester'] ?? 'ganjil';
+
         $dataInsert = [
             'jenis_ujian_id' => $this->request->getPost('jenis_ujian_id'),
             'mapel_id'       => $this->request->getPost('mapel_id'),
@@ -628,7 +649,9 @@ class PanitiaController extends BaseController
             'waktu_selesai'  => $this->request->getPost('waktu_selesai'),
             'durasi'         => $this->request->getPost('durasi'),
             'status'         => 'draft',
-            'pengawas_id'    => null
+            'pengawas_id'    => null,
+            'tahun_ajaran'   => $thnAktif,
+            'semester'       => $smtAktif
         ];
 
         $this->db->table('jadwal_ujian')->insert($dataInsert);
@@ -742,23 +765,17 @@ class PanitiaController extends BaseController
         return redirect()->back()->with('error', 'Gagal menulis file JSON. Pastikan folder public/data_soal memiliki izin tulis (chmod 777).');
     }
 
-    // =========================================================
-    // FUNGSI CETAK KARTU YANG SUDAH DIREVISI
-    // =========================================================
     public function cetakKartu()
     {
-        // 1. Ambil data untuk Filter Dropdown (Tingkat, Jurusan, Rombel)
         $tingkat = $this->db->table('siswa')->select('tingkat')->distinct()->orderBy('tingkat', 'ASC')->get()->getResultArray();
         $jurusan = $this->db->table('siswa')->select('jurusan')->distinct()->orderBy('jurusan', 'ASC')->get()->getResultArray();
         $rombel  = $this->db->table('siswa')->select('rombel')->distinct()->orderBy('rombel', 'ASC')->get()->getResultArray();
 
-        // 2. Tangkap parameter filter GET
         $filterTingkat = $this->request->getGet('tingkat');
         $filterJurusan = $this->request->getGet('jurusan');
         $filterRombel  = $this->request->getGet('rombel');
-        $cetakIds      = $this->request->getGet('cetak_ids'); // Parameter ID untuk cetak spesifik
+        $cetakIds      = $this->request->getGet('cetak_ids');
 
-        // 3. Query Builder Siswa
         $builderSiswa = $this->db->table('siswa')
             ->select('siswa.*, ruangan.nama_ruangan')
             ->join('ruangan', 'ruangan.id = siswa.ruangan_id', 'left')
@@ -767,7 +784,6 @@ class PanitiaController extends BaseController
             ->orderBy('siswa.rombel', 'ASC')
             ->orderBy('siswa.nama_lengkap', 'ASC');
 
-        // 4. Terapkan Filter (Jika user memilih dropdown)
         if (!empty($filterTingkat)) {
             $builderSiswa->where('siswa.tingkat', $filterTingkat);
         }
@@ -778,7 +794,6 @@ class PanitiaController extends BaseController
             $builderSiswa->where('siswa.rombel', $filterRombel);
         }
 
-        // 5. Terapkan Filter Cetak Spesifik (Jika user menceklis kartu)
         if (!empty($cetakIds)) {
             $idsArray = explode(',', $cetakIds);
             $builderSiswa->whereIn('siswa.id', $idsArray);
@@ -798,8 +813,6 @@ class PanitiaController extends BaseController
             'siswa'         => $siswa,
             'staff'         => $staff,
             'pengaturan'    => $pengaturan,
-
-            // Kirim variabel filter ke view
             'listTingkat'   => $tingkat,
             'listJurusan'   => $jurusan,
             'listRombel'    => $rombel,

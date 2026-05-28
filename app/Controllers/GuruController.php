@@ -35,13 +35,14 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use CodeIgniter\Database\BaseConnection;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class GuruController extends BaseController
 {
-    protected $db;
+    protected BaseConnection $db;
 
     public function __construct()
     {
@@ -141,7 +142,7 @@ class GuruController extends BaseController
         return redirect()->to('/panel/bank-soal?mapel=' . $mapelId)->with('success', 'Soal berhasil disimpan!');
     }
 
-    public function deleteSoal($id)
+    public function deleteSoal(string $id)
     {
         $soal = $this->db->table('bank_soal')->where('id', $id)->get()->getRowArray();
         if ($soal && $soal['file_audio']) {
@@ -174,7 +175,7 @@ class GuruController extends BaseController
         return view('panel/bank_soal_create', $data);
     }
 
-    public function exportSoal($mapelId)
+    public function exportSoal(string $mapelId)
     {
         $mapel = $this->db->table('master_mapel')->where('id', $mapelId)->get()->getRowArray();
         if (!$mapel) return redirect()->back()->with('error', 'Mata Pelajaran tidak ditemukan.');
@@ -289,7 +290,7 @@ class GuruController extends BaseController
         }
     }
 
-    public function editSoal($id)
+    public function editSoal(string $id)
     {
         $soal = $this->db->table('bank_soal')->where('id', $id)->get()->getRowArray();
 
@@ -307,7 +308,7 @@ class GuruController extends BaseController
         return view('panel/bank_soal_edit', $data);
     }
 
-    public function updateSoal($id)
+    public function updateSoal(string $id)
     {
         $soalLama = $this->db->table('bank_soal')->where('id', $id)->get()->getRowArray();
         if (!$soalLama) return redirect()->back()->with('error', 'Soal tidak ditemukan.');
@@ -359,5 +360,33 @@ class GuruController extends BaseController
 
         $this->db->table('bank_soal')->where('id', $id)->update($dataUpdate);
         return redirect()->to('/panel/bank-soal?mapel=' . $mapelId)->with('success', 'Soal berhasil diperbarui!');
+    }
+
+    /**
+     * Endpoint khusus AJAX Upload Gambar dari Summernote (Bank Soal)
+     */
+    public function uploadGambar()
+    {
+        if ($this->request->isAJAX()) {
+            $file = $this->request->getFile('gambar_soal');
+
+            if ($file && $file->isValid() && !$file->hasMoved()) {
+                $newName = $file->getRandomName();
+
+                // Simpan fisik file ke folder public/uploads/soal/
+                $file->move(FCPATH . 'uploads/soal/', $newName);
+
+                return $this->response->setJSON([
+                    'success' => true,
+                    'url'     => base_url('uploads/soal/' . $newName),
+                    'csrf'    => csrf_hash() // Update hash CSRF untuk request selanjutnya
+                ]);
+            }
+
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Gagal memproses file gambar.'
+            ]);
+        }
     }
 }

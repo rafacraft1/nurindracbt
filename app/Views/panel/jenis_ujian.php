@@ -1,3 +1,9 @@
+<?php
+
+/**
+ * @var array $jenis_ujian
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>

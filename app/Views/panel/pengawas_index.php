@@ -1,3 +1,18 @@
+<?php
+
+/**
+ * @var string $title
+ * @var array $jadwal
+ */
+
+$dbPengawas = \Config\Database::connect();
+$pengaturanPengawas = $dbPengawas->table('pengaturan')->where('id', 1)->get()->getRowArray();
+$zonaWaktu = $pengaturanPengawas['zona_waktu'] ?? 'Asia/Jakarta';
+
+$labelZona = 'WIB';
+if ($zonaWaktu === 'Asia/Makassar') $labelZona = 'WITA';
+if ($zonaWaktu === 'Asia/Jayapura') $labelZona = 'WIT';
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>
@@ -33,7 +48,7 @@
 
                 <div class="flex items-center text-sm text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 mb-5">
                     <span class="mr-2">⏰</span>
-                    <strong><?= date('H:i', $waktuMulai) ?> WIB</strong>
+                    <strong><?= date('H:i', $waktuMulai) ?> <?= $labelZona ?></strong>
                     <span class="mx-2 text-slate-300">|</span>
                     <span><?= $j['durasi'] ?> Menit</span>
                 </div>

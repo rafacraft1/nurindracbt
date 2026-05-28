@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @var array $mapel
+ * @var string|int $mapel_id
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>
@@ -11,14 +18,14 @@
         <h2 class="text-2xl font-bold text-slate-800">Form Input Soal Baru</h2>
         <p class="text-slate-500 text-sm mt-1">Mata Pelajaran: <strong class="text-blue-600"><?= esc($mapel['nama_mapel']) ?></strong></p>
     </div>
-    <a href="/panel/bank-soal?mapel=<?= $mapel_id ?>" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition">
+    <a href="/panel/bank-soal?mapel=<?= esc($mapel_id) ?>" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition">
         Kembali ke Daftar
     </a>
 </div>
 
 <form action="/panel/bank-soal/store" method="POST" enctype="multipart/form-data" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     <?= csrf_field() ?>
-    <input type="hidden" name="mapel_id" value="<?= $mapel_id ?>">
+    <input type="hidden" name="mapel_id" value="<?= esc($mapel_id) ?>">
 
     <div class="p-6 md:p-8 space-y-6">
 
@@ -68,7 +75,7 @@
     </div>
 
     <div class="px-6 py-5 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <a href="/panel/bank-soal?mapel=<?= $mapel_id ?>" class="px-6 py-2.5 border border-slate-300 bg-white rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition">Batalkan</a>
+        <a href="/panel/bank-soal?mapel=<?= esc($mapel_id) ?>" class="px-6 py-2.5 border border-slate-300 bg-white rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition">Batalkan</a>
         <button type="submit" class="px-8 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-500/30 transition text-lg flex items-center">
             💾 Simpan Soal
         </button>
@@ -79,6 +86,10 @@
 
 <?= $this->section('scripts') ?>
 <script>
+    // Inisialisasi Token CSRF secara Dinamis untuk keamanan AJAX
+    let csrfTokenName = '<?= csrf_token() ?>';
+    let csrfHash = '<?= csrf_hash() ?>';
+
     $(document).ready(function() {
         const summernoteConfig = {
             toolbar: [
@@ -88,7 +99,12 @@
             ],
             callbacks: {
                 onImageUpload: function(files) {
-                    for (let i = 0; i < files.length; i++) compressAndInsertImage(files[i], $(this));
+                    if (typeof showToast === 'function') {
+                        showToast("Sedang memproses dan mengunggah gambar...", "success");
+                    }
+                    for (let i = 0; i < files.length; i++) {
+                        compressAndUploadImage(files[i], $(this));
+                    }
                 }
             }
         };
@@ -103,11 +119,13 @@
         });
     });
 
-    function compressAndInsertImage(file, editorElement) {
+    function compressAndUploadImage(file, editorElement) {
         if (!file.type.match(/image.*/)) {
-            showToast("Bukan file gambar!", "error");
+            if (typeof showToast === 'function') showToast("Bukan file gambar!", "error");
+            else alert("Bukan file gambar!");
             return;
         }
+
         const reader = new window.FileReader();
         reader.onload = function(e) {
             const image = new window.Image();
@@ -115,15 +133,48 @@
                 const canvas = document.createElement('canvas');
                 let width = image.width,
                     height = image.height,
-                    MAX = 800;
+                    MAX = 800; // Resolusi aman 800px untuk layar dan file ringan
+
                 if (width > MAX) {
                     height *= MAX / width;
                     width = MAX;
                 }
+
                 canvas.width = width;
                 canvas.height = height;
                 canvas.getContext('2d').drawImage(image, 0, 0, width, height);
-                editorElement.summernote('insertImage', canvas.toDataURL('image/webp', 0.8));
+
+                // Ubah gambar menjadi Blob format WebP (kompresi tinggi tanpa pecah)
+                canvas.toBlob(function(blob) {
+                    let formData = new window.FormData();
+                    formData.append('gambar_soal', blob, 'img_' + Date.now() + '.webp');
+                    formData.append(csrfTokenName, csrfHash); // Proteksi CSRF
+
+                    // Kirim ke server
+                    $.ajax({
+                        url: '/panel/bank-soal/upload-gambar',
+                        method: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            if (response.success) {
+                                // Tanamkan URL fisik gambar yang baru dari server ke editor
+                                editorElement.summernote('insertImage', response.url);
+
+                                // Perbarui Token CSRF untuk upload gambar berikutnya
+                                csrfHash = response.csrf;
+                            } else {
+                                if (typeof showToast === 'function') showToast(response.message, "error");
+                                else alert(response.message);
+                            }
+                        },
+                        error: function() {
+                            if (typeof showToast === 'function') showToast("Gagal terhubung ke server saat unggah gambar.", "error");
+                            else alert("Gagal terhubung ke server.");
+                        }
+                    });
+                }, 'image/webp', 0.8); // Kualitas 80%
             }
             image.src = e.target.result;
         }

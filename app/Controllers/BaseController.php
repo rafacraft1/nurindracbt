@@ -62,5 +62,12 @@ abstract class BaseController extends Controller
 
         // Preload any models, libraries, etc, here.
         // $this->session = service('session');
+
+        // Ambil data konfigurasi untuk sinkronisasi zona waktu aplikasi secara global
+        $db = \Config\Database::connect();
+        $pengaturan = $db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+        if ($pengaturan && !empty($pengaturan['zona_waktu'])) {
+            date_default_timezone_set($pengaturan['zona_waktu']);
+        }
     }
 }

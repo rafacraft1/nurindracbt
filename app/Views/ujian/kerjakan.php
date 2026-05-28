@@ -1,3 +1,18 @@
+<?php
+
+/**
+ * @var string $title
+ * @var array $jadwal
+ * @var array $hasil
+ */
+
+$db = \Config\Database::connect();
+$pengaturan = $db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+$logo = $pengaturan['logo'] ?? null;
+
+// Logika Fallback Logo: Gunakan logo dari database jika ada, jika tidak arahkan ke folder assets/img/logo.png
+$urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png');
+?>
 <!DOCTYPE html>
 <html lang="id">
 
@@ -6,6 +21,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="<?= csrf_hash() ?>">
     <title><?= $title ?></title>
+
+    <link rel="icon" type="image/png" href="<?= $urlLogo ?>">
+
     <link href="<?= base_url('css/app.css') ?>" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>

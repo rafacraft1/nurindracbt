@@ -36,6 +36,9 @@ $db = \Config\Database::connect();
 $pengaturan = $db->table('pengaturan')->where('id', 1)->get()->getRowArray();
 $logo = $pengaturan['logo'] ?? null;
 $namaSekolah = $pengaturan['nama_sekolah'] ?? 'Nurindra CBT PRO';
+
+// Logika Fallback Logo: Gunakan logo dari database jika ada, jika tidak arahkan ke folder assets/img/logo.png
+$urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png');
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -45,9 +48,7 @@ $namaSekolah = $pengaturan['nama_sekolah'] ?? 'Nurindra CBT PRO';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - <?= esc($namaSekolah) ?></title>
 
-    <?php if ($logo): ?>
-        <link rel="icon" type="image/png" href="<?= base_url('uploads/' . $logo) ?>">
-    <?php endif; ?>
+    <link rel="icon" type="image/png" href="<?= $urlLogo ?>">
 
     <link href="<?= base_url('css/app.css') ?>" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
@@ -57,11 +58,8 @@ $namaSekolah = $pengaturan['nama_sekolah'] ?? 'Nurindra CBT PRO';
 
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
         <div class="p-8 text-center bg-slate-50 border-b border-slate-200">
-            <?php if ($logo): ?>
-                <img src="<?= base_url('uploads/' . $logo) ?>" alt="Logo Sekolah" class="w-24 h-24 mx-auto object-contain drop-shadow-md mb-4">
-            <?php else: ?>
-                <div class="w-20 h-20 bg-blue-600 text-white rounded-full flex items-center justify-center text-4xl mx-auto mb-4 shadow-lg">🏫</div>
-            <?php endif; ?>
+
+            <img src="<?= $urlLogo ?>" alt="Logo Sekolah" class="w-24 h-24 mx-auto object-contain drop-shadow-md mb-4">
 
             <h1 class="text-2xl font-bold text-slate-800 uppercase tracking-wide leading-tight"><?= esc($namaSekolah) ?></h1>
             <p class="text-xs text-slate-500 mt-1.5 font-semibold tracking-widest uppercase">Portal Ujian Terpadu</p>

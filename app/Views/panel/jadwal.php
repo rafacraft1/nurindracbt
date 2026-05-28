@@ -1,3 +1,19 @@
+<?php
+
+/**
+ * @var string $sortCol
+ * @var string $sortDir
+ * @var string $search
+ * @var int $currentPage
+ * @var int $totalPages
+ * @var int $totalData
+ * @var array $jadwal
+ * @var array $jenis_ujian
+ * @var array $mapel
+ * @var array $ruangan
+ * @var array $semua_guru
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>

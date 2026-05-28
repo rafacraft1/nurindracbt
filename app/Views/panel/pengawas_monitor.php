@@ -1,3 +1,13 @@
+<?php
+
+/**
+ * @var string $title
+ * @var array $jadwal
+ * @var array $siswa
+ * @var string $token
+ * @var int $sisa_waktu
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>

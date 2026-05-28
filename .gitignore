@@ -153,3 +153,24 @@ composer.phar
 # Mac OS X ekstra hidden files
 .Spotlight-V100
 .Trashes
+
+# 1. Aturan untuk data_ruangan dan data_soal
+/public/data_ruangan/*
+/public/data_soal/*
+!/public/data_ruangan/index.html
+!/public/data_soal/index.html
+
+# 2. Abaikan SEMUA isi di dalam folder public/uploads/
+/public/uploads/*
+
+# 3. Pengecualian: Izinkan Git membaca folder audio dan soal
+!/public/uploads/audio/
+!/public/uploads/soal/
+
+# 4. Abaikan semua isi di dalam folder audio dan soal tersebut
+/public/uploads/audio/*
+/public/uploads/soal/*
+
+# 5. Pengecualian akhir: Izinkan file index.html untuk diupload
+!/public/uploads/audio/index.html
+!/public/uploads/soal/index.html

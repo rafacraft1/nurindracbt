@@ -35,12 +35,13 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use CodeIgniter\Database\BaseConnection;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class PenilaianController extends BaseController
 {
-    protected $db;
+    protected BaseConnection $db;
 
     public function __construct()
     {
@@ -52,11 +53,18 @@ class PenilaianController extends BaseController
         $role   = session()->get('role');
         $guruId = session()->get('id');
 
+        // AMBIL PERIODE AKADEMIK AKTIF
+        $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+        $thnAktif   = $pengaturan['tahun_ajaran'] ?? '2025/2026';
+        $smtAktif   = $pengaturan['semester'] ?? 'ganjil';
+
         $builder = $this->db->table('jadwal_ujian')
             ->select('jadwal_ujian.*, master_mapel.nama_mapel, ruangan.nama_ruangan')
             ->join('master_mapel', 'master_mapel.id = jadwal_ujian.mapel_id', 'left')
             ->join('ruangan', 'ruangan.id = jadwal_ujian.ruangan_id', 'left')
-            ->whereIn('jadwal_ujian.status', ['ready', 'active', 'finished']);
+            ->whereIn('jadwal_ujian.status', ['ready', 'active', 'finished'])
+            ->where('jadwal_ujian.tahun_ajaran', $thnAktif)
+            ->where('jadwal_ujian.semester', $smtAktif);
 
         if ($role === 'guru') {
             $mapelGuru = $this->db->table('guru_mapel')->where('guru_id', $guruId)->get()->getResultArray();
@@ -77,8 +85,11 @@ class PenilaianController extends BaseController
         return view('panel/penilaian/index', $data);
     }
 
-    public function detail($jadwalId)
+    public function detail(string $jadwalId)
     {
+        $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+        $thnAktif   = $pengaturan['tahun_ajaran'] ?? '2025/2026';
+        $smtAktif   = $pengaturan['semester'] ?? 'ganjil';
 
         $jadwalRef = $this->db->table('jadwal_ujian')
             ->select('jadwal_ujian.*, master_mapel.nama_mapel, ruangan.nama_ruangan')
@@ -93,6 +104,8 @@ class PenilaianController extends BaseController
             ->where('mapel_id', $jadwalRef['mapel_id'])
             ->where('tingkat', $jadwalRef['tingkat'])
             ->where('jurusan', $jadwalRef['jurusan'])
+            ->where('tahun_ajaran', $thnAktif)
+            ->where('semester', $smtAktif)
             ->get()->getResultArray();
 
         $arrJadwalIds = array_column($semuaJadwalSerumpun, 'id');
@@ -117,7 +130,7 @@ class PenilaianController extends BaseController
         return view('panel/penilaian/detail', $data);
     }
 
-    public function koreksi($jadwalId, $siswaId)
+    public function koreksi(string $jadwalId, string $siswaId)
     {
         $jadwal = $this->db->table('jadwal_ujian')->where('id', $jadwalId)->get()->getRowArray();
         $siswa  = $this->db->table('siswa')->where('id', $siswaId)->get()->getRowArray();
@@ -165,9 +178,12 @@ class PenilaianController extends BaseController
         return redirect()->to("/panel/penilaian/detail/$jadwalId")->with('success', 'Nilai Essai berhasil disimpan!');
     }
 
-    public function exportExcel($jadwalId)
+    public function exportExcel(string $jadwalId)
     {
-        // Ambil jadwal referensi
+        $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+        $thnAktif   = $pengaturan['tahun_ajaran'] ?? '2025/2026';
+        $smtAktif   = $pengaturan['semester'] ?? 'ganjil';
+
         $jadwalRef = $this->db->table('jadwal_ujian')
             ->select('jadwal_ujian.*, master_mapel.nama_mapel')
             ->join('master_mapel', 'master_mapel.id = jadwal_ujian.mapel_id', 'left')
@@ -182,12 +198,13 @@ class PenilaianController extends BaseController
             ->where('mapel_id', $jadwalRef['mapel_id'])
             ->where('tingkat', $jadwalRef['tingkat'])
             ->where('jurusan', $jadwalRef['jurusan'])
+            ->where('tahun_ajaran', $thnAktif)
+            ->where('semester', $smtAktif)
             ->get()->getResultArray();
 
         $arrJadwalIds = array_column($semuaJadwalSerumpun, 'id');
         if (empty($arrJadwalIds)) $arrJadwalIds = [0];
 
-        // Tarik semua siswa kelas tersebut beserta nilainya
         $siswa = $this->db->table('siswa')
             ->select('siswa.*, hasil_ujian.nilai_pg, hasil_ujian.nilai_essai, hasil_ujian.status, master_jenis_ujian.nama_ujian as keterangan_ujian')
             ->join('hasil_ujian', "hasil_ujian.siswa_id = siswa.id AND hasil_ujian.jadwal_id IN (" . implode(',', $arrJadwalIds) . ")", 'left')

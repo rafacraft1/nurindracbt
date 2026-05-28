@@ -75,6 +75,7 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
         $routes->get('bank-soal/export/(:num)', 'GuruController::exportSoal/$1');
         $routes->post('bank-soal/import', 'GuruController::importSoal');
         $routes->post('bank-soal/delete/(:num)', 'GuruController::deleteSoal/$1');
+        $routes->post('bank-soal/upload-gambar', 'GuruController::uploadGambar');
     });
 
     $routes->group('ruang-pengawas', static function ($routes) {

@@ -66,9 +66,17 @@ class ProdSeeder extends Seeder
 
         $pengaturan = [
             'nama_sekolah'       => 'Nurindra CBT PRO',
-            'kepala_sekolah'     => 'Nurindra, S.Kom, M.Pd, MM',
+            'kepala_sekolah'     => 'Nurindra, S.Kom., M.Pd., MM',
             'nip_kepala_sekolah' => '-',
-            'logo'               => null
+            'logo'               => null,
+            // Penyesuaian kolom baru
+            'alamat_sekolah'     => 'Jl. Pendidikan No. 1, Nusantara',
+            'email_telepon'      => 'info@sekolah.sch.id / 0812-2032-9780',
+            'tahun_ajaran'       => '2025/2026',
+            'semester'           => 'ganjil',
+            'zona_waktu'         => 'Asia/Jakarta',
+            'block_multi_login'  => 0,
+            'maintenance_mode'   => 0,
         ];
 
         if ($this->db->table('pengaturan')->countAllResults() == 0) {

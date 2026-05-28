@@ -43,7 +43,7 @@ class AuthController extends BaseController
         if (session()->get('logged_in')) {
             return session()->get('user_type') === 'staff'
                 ? redirect()->to('/panel/dashboard')
-                : redirect()->to('/ujian'); // <-- PERBAIKAN: Lempar ke /ujian, bukan /
+                : redirect()->to('/ujian');
         }
 
         return view('auth/login');
@@ -56,10 +56,21 @@ class AuthController extends BaseController
 
         $db = \Config\Database::connect();
 
+        // 1. Ambil data konfigurasi dari tabel pengaturan
+        $pengaturan = $db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+        $isMaintenance = $pengaturan['maintenance_mode'] ?? 0;
+        $isBlockMultiLogin = $pengaturan['block_multi_login'] ?? 0;
+
         $staff = $db->table('staff')->where('username', $username)->get()->getRowArray();
 
         if ($staff) {
             if (password_verify($password, $staff['password'])) {
+
+                // Cek Maintenance Mode untuk Staff: Hanya admin yang diizinkan masuk
+                if ($isMaintenance == 1 && $staff['role'] !== 'admin') {
+                    return redirect()->back()->with('error', 'Sistem sedang dalam pemeliharaan (Maintenance). Akses hanya untuk Administrator.');
+                }
+
                 session()->set([
                     'id'           => $staff['id'],
                     'username'     => $staff['username'],
@@ -79,7 +90,13 @@ class AuthController extends BaseController
         if ($siswa) {
             if (password_verify($password, $siswa['password'])) {
 
-                if ($siswa['is_login'] == 1) {
+                // Cek Maintenance Mode untuk Siswa: Tidak diizinkan masuk sama sekali
+                if ($isMaintenance == 1) {
+                    return redirect()->back()->with('error', 'Sistem sedang ditutup sementara oleh Panitia. Silakan tunggu informasi lebih lanjut.');
+                }
+
+                // Cek Block Multi Login: Berlaku jika diaktifkan di panel pengaturan
+                if ($isBlockMultiLogin == 1 && $siswa['is_login'] == 1) {
                     return redirect()->back()->with('error', 'Akun sedang aktif di perangkat lain! Lapor Pengawas untuk mereset sesi Anda.');
                 }
 

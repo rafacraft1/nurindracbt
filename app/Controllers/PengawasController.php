@@ -35,10 +35,11 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use CodeIgniter\Database\BaseConnection;
 
 class PengawasController extends BaseController
 {
-    protected $db;
+    protected BaseConnection $db;
 
     public function __construct()
     {
@@ -51,10 +52,17 @@ class PengawasController extends BaseController
         $role       = session()->get('role');
         $pengawasId = session()->get('id');
 
+        // AMBIL PERIODE AKADEMIK AKTIF
+        $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+        $thnAktif   = $pengaturan['tahun_ajaran'] ?? '2025/2026';
+        $smtAktif   = $pengaturan['semester'] ?? 'ganjil';
+
         $builder = $this->db->table('jadwal_ujian')
             ->select('jadwal_ujian.*, master_mapel.nama_mapel, ruangan.nama_ruangan')
             ->join('master_mapel', 'master_mapel.id = jadwal_ujian.mapel_id', 'left')
-            ->join('ruangan', 'ruangan.id = jadwal_ujian.ruangan_id', 'left');
+            ->join('ruangan', 'ruangan.id = jadwal_ujian.ruangan_id', 'left')
+            ->where('jadwal_ujian.tahun_ajaran', $thnAktif)
+            ->where('jadwal_ujian.semester', $smtAktif);
 
         if ($role !== 'admin') {
             $builder->where('pengawas_id', $pengawasId);
@@ -70,7 +78,7 @@ class PengawasController extends BaseController
         return view('panel/pengawas_index', $data);
     }
 
-    public function monitor($jadwalId)
+    public function monitor(string $jadwalId)
     {
         $jadwal = $this->db->table('jadwal_ujian')
             ->select('jadwal_ujian.*, master_mapel.nama_mapel, ruangan.nama_ruangan')
@@ -121,7 +129,7 @@ class PengawasController extends BaseController
         return view('panel/pengawas_monitor', $data);
     }
 
-    public function generateTokenAjax($jadwalId)
+    public function generateTokenAjax(string $jadwalId)
     {
         $token = substr(str_shuffle("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 6);
 
@@ -148,13 +156,13 @@ class PengawasController extends BaseController
         return $this->response->setJSON(['success' => false, 'message' => 'Gagal menulis file token!']);
     }
 
-    public function resetLogin($siswaId)
+    public function resetLogin(string $siswaId)
     {
         $this->db->table('siswa')->where('id', $siswaId)->update(['is_login' => 0]);
         return redirect()->back()->with('success', 'Sesi login siswa berhasil direset. Siswa sudah bisa login kembali.');
     }
 
-    public function forceSelesai($jadwalId, $siswaId)
+    public function forceSelesai(string $jadwalId, string $siswaId)
     {
         $this->db->table('hasil_ujian')
             ->where('jadwal_id', $jadwalId)
@@ -164,7 +172,7 @@ class PengawasController extends BaseController
         return redirect()->back()->with('success', 'Ujian siswa berhasil diselesaikan secara paksa.');
     }
 
-    public function tandaiHadir($jadwalId, $siswaId)
+    public function tandaiHadir(string $jadwalId, string $siswaId)
     {
         $cek = $this->db->table('hasil_ujian')
             ->where(['jadwal_id' => $jadwalId, 'siswa_id' => $siswaId])

@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @var array $ruangan
+ * @var array $siswa
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>

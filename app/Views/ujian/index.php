@@ -1,3 +1,24 @@
+<?php
+
+/**
+ * @var string $title
+ * @var array $jadwalAktif
+ * @var array $statusUjian
+ * @var array $kehadiran
+ */
+
+$dbUjian = \Config\Database::connect();
+$pengaturanUjian = $dbUjian->table('pengaturan')->where('id', 1)->get()->getRowArray();
+$zonaWaktu = $pengaturanUjian['zona_waktu'] ?? 'Asia/Jakarta';
+$logo = $pengaturanUjian['logo'] ?? null;
+
+$labelZona = 'WIB';
+if ($zonaWaktu === 'Asia/Makassar') $labelZona = 'WITA';
+if ($zonaWaktu === 'Asia/Jayapura') $labelZona = 'WIT';
+
+// Logika Fallback Logo: Gunakan logo dari database jika ada, jika tidak arahkan ke folder assets/img/logo.png
+$urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png');
+?>
 <!DOCTYPE html>
 <html lang="id">
 
@@ -5,6 +26,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title><?= $title ?></title>
+
+    <link rel="icon" type="image/png" href="<?= $urlLogo ?>">
+
     <link href="<?= base_url('css/app.css') ?>" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>
@@ -13,8 +37,10 @@
 
     <header class="bg-blue-600 text-white shadow-md sticky top-0 z-40">
         <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <span class="text-2xl">🎓</span>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-white rounded-md flex items-center justify-center p-0.5 shadow-sm shrink-0">
+                    <img src="<?= $urlLogo ?>" alt="Logo" class="w-full h-full object-contain">
+                </div>
                 <div class="hidden sm:block">
                     <h1 class="font-bold text-lg leading-tight tracking-wide">CBT PRO</h1>
                     <p class="text-[10px] text-blue-200">Portal Ujian Siswa</p>
@@ -100,7 +126,7 @@
                                     <?php else: ?>
                                         <div class="flex gap-2 opacity-80">
                                             <input type="text" disabled placeholder="🔒 MENUNGGU ABSEN PENGAWAS" class="flex-1 px-4 py-3 bg-slate-100 border border-slate-300 rounded-xl outline-none font-bold text-center text-slate-500 text-xs sm:text-sm cursor-not-allowed">
-                                            <button onclick="window.location.reload()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-xl shadow transition text-sm flex items-center justify-center">
+                                            <button type="button" onclick="window.location.reload()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-xl shadow transition text-sm flex items-center justify-center">
                                                 🔄 Cek
                                             </button>
                                         </div>
@@ -130,14 +156,15 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script>
-        // ENGINE WAKTU SERVER DIGITAL
+        // ENGINE WAKTU SERVER DIGITAL (Sudah Dinamis)
+        let labelZona = "<?= $labelZona ?>";
         let serverTime = new window.Date("<?= date('Y-m-d\TH:i:s') ?>");
         setInterval(() => {
             serverTime.setSeconds(serverTime.getSeconds() + 1);
             let h = String(serverTime.getHours()).padStart(2, '0');
             let m = String(serverTime.getMinutes()).padStart(2, '0');
             let s = String(serverTime.getSeconds()).padStart(2, '0');
-            document.getElementById('serverClock').innerText = `${h}:${m}:${s} WIB`;
+            document.getElementById('serverClock').innerText = `${h}:${m}:${s} ${labelZona}`;
         }, 1000);
 
         function confirmLogout() {
@@ -170,9 +197,9 @@
             }).showToast();
         }
 
-        <?php if (session()->getFlashdata('error')) : ?>showToast("<?= session()->getFlashdata('error') ?>", 'error');
+        <?php if (session()->getFlashdata('error')) : ?>showToast("<?= esc(session()->getFlashdata('error'), 'js') ?>", 'error');
         <?php endif; ?>
-        <?php if (session()->getFlashdata('success')) : ?>showToast("<?= session()->getFlashdata('success') ?>", 'success');
+        <?php if (session()->getFlashdata('success')) : ?>showToast("<?= esc(session()->getFlashdata('success'), 'js') ?>", 'success');
         <?php endif; ?>
     </script>
 </body>

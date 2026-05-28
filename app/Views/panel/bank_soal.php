@@ -1,3 +1,11 @@
+<?php
+
+/**
+ * @var array $mapel
+ * @var string|int $filterMapelId
+ * @var array $soal
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>

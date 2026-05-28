@@ -3,6 +3,12 @@ $dbPanel = \Config\Database::connect();
 $pengaturanPanel = $dbPanel->table('pengaturan')->where('id', 1)->get()->getRowArray();
 $logoSekolah = $pengaturanPanel['logo'] ?? null;
 $namaSekolah = $pengaturanPanel['nama_sekolah'] ?? 'CBT PRO';
+$zonaWaktu   = $pengaturanPanel['zona_waktu'] ?? 'Asia/Jakarta';
+
+// Menentukan label zona waktu secara dinamis
+$labelZona = 'WIB';
+if ($zonaWaktu === 'Asia/Makassar') $labelZona = 'WITA';
+if ($zonaWaktu === 'Asia/Jayapura') $labelZona = 'WIT';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -57,7 +63,7 @@ $namaSekolah = $pengaturanPanel['nama_sekolah'] ?? 'CBT PRO';
                     <img src="<?= base_url('uploads/' . $logoSekolah) ?>" alt="Logo" class="w-full h-full object-contain">
                 </div>
             <?php endif; ?>
-            <h1 class="font-bold text-2xl tracking-wider text-blue-400 truncate">CBT<span class="text-white">PRO</span></h1>
+            <h1 class="font-bold text-xl tracking-wider text-blue-400 truncate"><?= esc($namaSekolah) ?></h1>
         </div>
 
         <nav id="sidebarNav" class="flex-1 p-4 space-y-1.5 overflow-y-auto no-scrollbar scroll-smooth">
@@ -256,6 +262,7 @@ $namaSekolah = $pengaturanPanel['nama_sekolah'] ?? 'CBT PRO';
         // ==========================================
         // ENGINE JAM SERVER PANEL
         // ==========================================
+        let labelZona = "<?= $labelZona ?>";
         let panelServerTime = new window.Date("<?= date('Y-m-d\TH:i:s') ?>");
         setInterval(() => {
             panelServerTime.setSeconds(panelServerTime.getSeconds() + 1);
@@ -263,7 +270,7 @@ $namaSekolah = $pengaturanPanel['nama_sekolah'] ?? 'CBT PRO';
             let m = String(panelServerTime.getMinutes()).padStart(2, '0');
             let s = String(panelServerTime.getSeconds()).padStart(2, '0');
             let elJam = document.getElementById('jamServerPanel');
-            if (elJam) elJam.innerText = `${h}:${m}:${s} WIB`;
+            if (elJam) elJam.innerText = `${h}:${m}:${s} ${labelZona}`;
         }, 1000);
     </script>
 

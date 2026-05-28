@@ -1,3 +1,10 @@
+<?php
+
+/**
+ * @var array $soal
+ * @var array $mapel
+ */
+?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('content') ?>

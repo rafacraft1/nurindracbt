@@ -35,10 +35,11 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use CodeIgniter\Database\BaseConnection;
 
 class AdminController extends BaseController
 {
-    protected $db;
+    protected BaseConnection $db;
 
     public function __construct()
     {
@@ -110,7 +111,7 @@ class AdminController extends BaseController
         return redirect()->back()->with('success', 'Staff baru berhasil ditambahkan.');
     }
 
-    public function updateStaff($id)
+    public function updateStaff(string $id)
     {
         $this->checkAdmin();
 
@@ -153,7 +154,7 @@ class AdminController extends BaseController
         return redirect()->back()->with('success', 'Data Staff berhasil diperbarui.');
     }
 
-    public function deleteStaff($id)
+    public function deleteStaff(string $id)
     {
         $this->checkAdmin();
 
@@ -181,13 +182,16 @@ class AdminController extends BaseController
             $builder->insert([
                 'nama_sekolah'       => 'SMA NEGERI 1 CBT PRO',
                 'kepala_sekolah'     => 'Nama Kepala Sekolah, M.Pd',
-                'nip_kepala_sekolah' => '198001012005011001'
+                'nip_kepala_sekolah' => '198001012005011001',
+                'tahun_ajaran'       => '2025/2026',
+                'semester'           => 'ganjil',
+                'zona_waktu'         => 'Asia/Jakarta',
             ]);
         }
 
         $data = [
             'title'      => 'Pengaturan Sistem - CBT PRO',
-            'pengaturan' => $builder->get()->getRowArray()
+            'pengaturan' => $builder->where('id', 1)->get()->getRowArray()
         ];
 
         return view('panel/pengaturan', $data);
@@ -201,6 +205,13 @@ class AdminController extends BaseController
             'nama_sekolah'       => strtoupper($this->request->getPost('nama_sekolah')),
             'kepala_sekolah'     => $this->request->getPost('kepala_sekolah'),
             'nip_kepala_sekolah' => $this->request->getPost('nip_kepala_sekolah'),
+            'alamat_sekolah'     => $this->request->getPost('alamat_sekolah'),
+            'email_telepon'      => $this->request->getPost('email_telepon'),
+            'tahun_ajaran'       => $this->request->getPost('tahun_ajaran'),
+            'semester'           => $this->request->getPost('semester'),
+            'zona_waktu'         => $this->request->getPost('zona_waktu'),
+            'block_multi_login'  => $this->request->getPost('block_multi_login') ? 1 : 0,
+            'maintenance_mode'   => $this->request->getPost('maintenance_mode') ? 1 : 0,
         ];
 
         $logoFile = $this->request->getFile('logo');

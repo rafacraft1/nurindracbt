@@ -11,6 +11,10 @@
  * @var string $filterJurusan
  * @var string $filterRombel
  */
+
+$logo = $pengaturan['logo'] ?? null;
+// Logika Fallback Logo: Gunakan logo dari database jika ada, jika tidak arahkan ke folder assets/img/logo.png
+$urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png');
 ?>
 <?= $this->extend('layouts/panel') ?>
 
@@ -67,7 +71,7 @@
     }
 
     /* Optimasi Render / Lazy Load DOM */
-    @media screen {
+    @media merge {
 
         .page-container,
         .kartu-item {
@@ -269,17 +273,16 @@
 
                             <div class="flex items-center border-b-2 border-slate-800 pb-1 mb-[3mm]">
                                 <div class="w-8 h-8 border border-slate-400 flex items-center justify-center mr-2 rounded-full shrink-0 overflow-hidden bg-white">
-                                    <?php if (!empty($pengaturan['logo'])): ?>
-                                        <img src="<?= base_url('uploads/' . $pengaturan['logo']) ?>" loading="lazy" alt="Logo" class="w-full h-full object-contain p-0.5">
-                                    <?php else: ?>
-                                        <span class="text-[7px] text-slate-500 font-bold">LOGO</span>
-                                    <?php endif; ?>
+                                    <img src="<?= $urlLogo ?>" loading="lazy" alt="Logo" class="w-full h-full object-contain p-0.5">
                                 </div>
-                                <div class="leading-tight">
-                                    <h2 class="font-bold text-xs uppercase text-slate-800">Kartu Login CBT</h2>
-                                    <p class="text-[9px] text-slate-600">
+                                <div class="leading-tight flex-1 min-w-0">
+                                    <h2 class="font-bold text-xs uppercase text-slate-800 tracking-wide">Kartu Login CBT</h2>
+                                    <p class="text-[9px] text-slate-600 font-bold truncate">
                                         <?= esc($pengaturan['nama_sekolah'] ?? 'Ujian Berbasis Komputer & Smartphone') ?>
                                     </p>
+                                    <?php if (!empty($pengaturan['alamat_sekolah'])): ?>
+                                        <p class="text-[6px] text-slate-400 truncate leading-none mt-0.5"><?= esc($pengaturan['alamat_sekolah']) ?></p>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 
@@ -357,11 +360,9 @@
                 }
                 ?>
                 <div class="<?= $bgClass ?> text-white p-3 border-b-2 border-slate-800 flex justify-center items-center gap-2">
-                    <?php if (!empty($pengaturan['logo'])): ?>
-                        <div class="w-5 h-5 bg-white rounded-full overflow-hidden flex items-center justify-center shrink-0">
-                            <img src="<?= base_url('uploads/' . $pengaturan['logo']) ?>" loading="lazy" alt="Logo" class="w-full h-full object-contain p-[2px]">
-                        </div>
-                    <?php endif; ?>
+                    <div class="w-5 h-5 bg-white rounded-full overflow-hidden flex items-center justify-center shrink-0">
+                        <img src="<?= $urlLogo ?>" loading="lazy" alt="Logo" class="w-full h-full object-contain p-[2px]">
+                    </div>
                     <h2 class="font-bold text-xs uppercase tracking-wider">ID CARD STAFF</h2>
                 </div>
 

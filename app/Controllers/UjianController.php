@@ -35,10 +35,11 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use CodeIgniter\Database\BaseConnection;
 
 class UjianController extends BaseController
 {
-    protected $db;
+    protected BaseConnection $db;
 
     public function __construct()
     {
@@ -50,6 +51,11 @@ class UjianController extends BaseController
     {
         $siswa = session()->get();
         $now   = date('Y-m-d H:i:s');
+
+        // AMBIL PERIODE AKADEMIK AKTIF
+        $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+        $thnAktif   = $pengaturan['tahun_ajaran'] ?? '2025/2026';
+        $smtAktif   = $pengaturan['semester'] ?? 'ganjil';
 
         $this->db->table('jadwal_ujian')
             ->where('waktu_selesai <=', $now)
@@ -78,7 +84,9 @@ class UjianController extends BaseController
             ->join('master_jenis_ujian', 'master_jenis_ujian.id = jadwal_ujian.jenis_ujian_id')
             ->where('jadwal_ujian.ruangan_id', $siswa['ruangan_id'])
             ->where('jadwal_ujian.tingkat', $siswa['tingkat'])
-            ->where('jadwal_ujian.jurusan', $siswa['jurusan']);
+            ->where('jadwal_ujian.jurusan', $siswa['jurusan'])
+            ->where('jadwal_ujian.tahun_ajaran', $thnAktif)
+            ->where('jadwal_ujian.semester', $smtAktif);
 
         if (!empty($jadwalProgress)) {
             $builder->groupStart()
@@ -142,7 +150,7 @@ class UjianController extends BaseController
         return redirect()->to('/ujian/kerjakan/' . $jadwalId);
     }
 
-    public function kerjakan($jadwalId)
+    public function kerjakan(string $jadwalId)
     {
         $siswaId = session()->get('id');
 
