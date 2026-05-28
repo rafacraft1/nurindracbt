@@ -1,70 +1,43 @@
 <?php
 
-/**
- * ============================================================================
- * CBT PRO - ENTERPRISE EDITION
- * ============================================================================
- *
- * @package    Nurindra CBT PRO
- * @author     Nurindra
- * @copyright  2026 Nurindra CBT PRO
- * @version    1.0.0
- *
- * @description CBT PRO adalah platform Ujian Berbasis Komputer (Computer Based
- * Test) berskala Enterprise yang dirancang untuk performa tinggi, keamanan
- * absolut, dan manajemen akademik terintegrasi untuk institusi modern.
- * Aplikasi ini boleh digunakan dan di sebarluaskan secara gratis
- *
- * ----------------------------------------------------------------------------
- * HUBUNGI PENGEMBANG:
- * Contact Person : Nurindra
- * Email          : nurindra.id@gmail.com
- * WhatsApp       : +62 812-2032-9780
- * YouTube        : https://www.youtube.com/@nurindraid
- * Instagram      : https://www.instagram.com/kevinecraft
- * TikTok         : https://www.tiktok.com/@kevinecraft1
- * ----------------------------------------------------------------------------
- * PERINGATAN HAK CIPTA:
- * Kode sumber ini dilindungi oleh kekayaan intelektual. Dilarang keras
- * memodifikasi atau menjual ulang bagian manapun dari aplikasi ini 
- * tanpa izin tertulis dari pihak pengembang.
- * ============================================================================
- */
-
-
 namespace App\Controllers;
 
-use App\Controllers\BaseController;
-use CodeIgniter\Database\BaseConnection;
+use App\Models\JadwalModel;
+use App\Models\HasilUjianModel;
+use App\Models\BankSoalModel;
+use App\Models\SiswaModel;
+use App\Services\UjianService;
+use CodeIgniter\HTTP\ResponseInterface;
 
 class UjianController extends BaseController
 {
-    protected BaseConnection $db;
+    protected JadwalModel $jadwalModel;
+    protected HasilUjianModel $hasilUjianModel;
+    protected BankSoalModel $bankSoalModel;
+    protected SiswaModel $siswaModel;
+    protected UjianService $ujianService;
 
     public function __construct()
     {
-        $this->db = \Config\Database::connect();
+        $this->jadwalModel     = new JadwalModel();
+        $this->hasilUjianModel = new HasilUjianModel();
+        $this->bankSoalModel   = new BankSoalModel();
+        $this->siswaModel      = new SiswaModel();
+        $this->ujianService    = new UjianService();
     }
 
-    // 1. Halaman Lobi Siswa (Menampilkan Jadwal Tersedia)
-    public function index()
+    public function index(): string
     {
         $siswa = session()->get();
         $now   = date('Y-m-d H:i:s');
 
-        // AMBIL PERIODE AKADEMIK AKTIF
-        $pengaturan = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
-        $thnAktif   = $pengaturan['tahun_ajaran'] ?? '2025/2026';
-        $smtAktif   = $pengaturan['semester'] ?? 'ganjil';
-
-        $this->db->table('jadwal_ujian')
-            ->where('waktu_selesai <=', $now)
+        // Otomatis menutup ujian yang lewat waktu
+        $this->jadwalModel->where('waktu_selesai <=', $now)
             ->whereIn('status', ['ready', 'active'])
-            ->update(['status' => 'finished']);
+            ->set(['status' => 'finished'])
+            ->update();
 
-        $riwayat = $this->db->table('hasil_ujian')
-            ->where('siswa_id', $siswa['id'])
-            ->get()->getResultArray();
+        $riwayat = $this->hasilUjianModel->where('siswa_id', $siswa['id'])->findAll();
 
         $statusUjian    = [];
         $kehadiran      = [];
@@ -78,15 +51,14 @@ class UjianController extends BaseController
             }
         }
 
-        $builder = $this->db->table('jadwal_ujian')
-            ->select('jadwal_ujian.*, master_mapel.nama_mapel, master_jenis_ujian.nama_ujian')
+        $builder = $this->jadwalModel->select('jadwal_ujian.*, master_mapel.nama_mapel, master_jenis_ujian.nama_ujian')
             ->join('master_mapel', 'master_mapel.id = jadwal_ujian.mapel_id')
             ->join('master_jenis_ujian', 'master_jenis_ujian.id = jadwal_ujian.jenis_ujian_id')
             ->where('jadwal_ujian.ruangan_id', $siswa['ruangan_id'])
             ->where('jadwal_ujian.tingkat', $siswa['tingkat'])
             ->where('jadwal_ujian.jurusan', $siswa['jurusan'])
-            ->where('jadwal_ujian.tahun_ajaran', $thnAktif)
-            ->where('jadwal_ujian.semester', $smtAktif);
+            ->where('jadwal_ujian.tahun_ajaran', $this->tahunAktif)
+            ->where('jadwal_ujian.semester', $this->smtAktif);
 
         if (!empty($jadwalProgress)) {
             $builder->groupStart()
@@ -97,11 +69,9 @@ class UjianController extends BaseController
             $builder->whereIn('jadwal_ujian.status', ['ready', 'active']);
         }
 
-        $jadwalAktif = $builder->orderBy('jadwal_ujian.waktu_mulai', 'ASC')->get()->getResultArray();
-
         $data = [
             'title'       => 'Lobi Ujian - CBT PRO',
-            'jadwalAktif' => $jadwalAktif,
+            'jadwalAktif' => $builder->orderBy('jadwal_ujian.waktu_mulai', 'ASC')->findAll(),
             'statusUjian' => $statusUjian,
             'kehadiran'   => $kehadiran
         ];
@@ -109,39 +79,35 @@ class UjianController extends BaseController
         return view('ujian/index', $data);
     }
 
-    public function mulai()
+    public function mulai(): ResponseInterface
     {
-        $jadwalId   = $this->request->getPost('jadwal_id');
-        $tokenInput = strtoupper($this->request->getPost('token'));
-        $siswaId    = session()->get('id');
+        $jadwalId   = (string)$this->request->getPost('jadwal_id');
+        $tokenInput = strtoupper((string)$this->request->getPost('token'));
+        $siswaId    = (string)session()->get('id');
 
-        $jadwal = $this->db->table('jadwal_ujian')->where('id', $jadwalId)->get()->getRowArray();
+        $jadwal = $this->jadwalModel->find($jadwalId);
 
         if ($jadwal['waktu_selesai'] <= date('Y-m-d H:i:s')) {
             return redirect()->back()->with('error', 'Akses Ditolak! Jadwal ujian ini sudah ditutup.');
         }
 
-        $jsonPath = FCPATH . 'data_ruangan/token_' . $jadwalId . '.json';
-        if (!file_exists($jsonPath)) return redirect()->back()->with('error', 'Token belum dirilis oleh Pengawas!');
-
-        $tokenData = json_decode(file_get_contents($jsonPath), true);
-        if ($tokenInput !== $tokenData['token']) return redirect()->back()->with('error', 'Token salah atau sudah kadaluarsa!');
-
-        $cekHasil = $this->db->table('hasil_ujian')
-            ->where('jadwal_id', $jadwalId)
-            ->where('siswa_id', $siswaId)
-            ->get()->getRowArray();
-
-        if (!$cekHasil || $cekHasil['is_hadir'] == 0) {
-            return redirect()->back()->with('error', 'Akses Ditolak! Anda belum diabsen kehadiran oleh Pengawas di dalam ruangan.');
+        // Delegasi pengecekan ke Service
+        if (!$this->ujianService->validateToken($jadwalId, $tokenInput)) {
+            return redirect()->back()->with('error', 'Token salah atau belum dirilis Pengawas!');
         }
 
-        if ($cekHasil['status'] == 'completed') {
+        $cekHasil = $this->hasilUjianModel->getHasilByJadwalSiswa($jadwalId, $siswaId);
+
+        if (!$cekHasil || (int)$cekHasil['is_hadir'] === 0) {
+            return redirect()->back()->with('error', 'Akses Ditolak! Anda belum diabsen oleh Pengawas.');
+        }
+
+        if ($cekHasil['status'] === 'completed') {
             return redirect()->back()->with('error', 'Anda sudah menyelesaikan ujian ini!');
         }
 
-        if ($cekHasil['status'] == 'pending') {
-            $this->db->table('hasil_ujian')->where('id', $cekHasil['id'])->update([
+        if ($cekHasil['status'] === 'pending') {
+            $this->hasilUjianModel->update($cekHasil['id'], [
                 'status'            => 'progress',
                 'waktu_mulai_ujian' => date('Y-m-d H:i:s')
             ]);
@@ -150,28 +116,25 @@ class UjianController extends BaseController
         return redirect()->to('/ujian/kerjakan/' . $jadwalId);
     }
 
-    public function kerjakan(string $jadwalId)
+    public function kerjakan(string $jadwalId): ResponseInterface|string
     {
-        $siswaId = session()->get('id');
+        $siswaId = (string)session()->get('id');
+        $hasil   = $this->hasilUjianModel->getHasilByJadwalSiswa($jadwalId, $siswaId);
 
-        $hasil = $this->db->table('hasil_ujian')->where('jadwal_id', $jadwalId)->where('siswa_id', $siswaId)->get()->getRowArray();
         if (!$hasil || $hasil['status'] !== 'progress') {
             return redirect()->to('/ujian')->with('error', 'Akses ilegal. Silakan masukkan token terlebih dahulu.');
         }
 
-        $jadwal = $this->db->table('jadwal_ujian')
-            ->select('jadwal_ujian.*, master_mapel.nama_mapel')
+        $jadwal = $this->jadwalModel->select('jadwal_ujian.*, master_mapel.nama_mapel')
             ->join('master_mapel', 'master_mapel.id = jadwal_ujian.mapel_id')
-            ->where('jadwal_ujian.id', $jadwalId)
-            ->get()->getRowArray();
+            ->find($jadwalId);
 
-        $absoluteDeadline = strtotime($jadwal['waktu_selesai']) + (15 * 60);
+        $absoluteDeadline = strtotime((string)$jadwal['waktu_selesai']) + (15 * 60);
 
         if (time() > $absoluteDeadline) {
-            $this->db->table('hasil_ujian')->where('id', $hasil['id'])->update(['status' => 'completed']);
-            $this->db->table('siswa')->where('id', $siswaId)->update(['is_login' => 0]);
-
-            return redirect()->to('/ujian')->with('error', 'Waktu toleransi pengerjaan (15 Menit) telah habis. Jawaban Anda disubmit otomatis.');
+            $this->hasilUjianModel->update($hasil['id'], ['status' => 'completed']);
+            $this->siswaModel->update($siswaId, ['is_login' => 0]);
+            return redirect()->to('/ujian')->with('error', 'Waktu toleransi habis. Jawaban disubmit otomatis.');
         }
 
         $data = [
@@ -183,18 +146,18 @@ class UjianController extends BaseController
         return view('ujian/kerjakan', $data);
     }
 
-    public function submit()
+    public function submit(): ResponseInterface
     {
-        $payloadJson = $this->request->getPost('payload_jawaban');
-        if (!$payloadJson) return redirect()->to('/ujian')->with('error', 'Gagal mengirim jawaban. Data kosong.');
+        $payloadJson = (string)$this->request->getPost('payload_jawaban');
+        if (empty($payloadJson)) return redirect()->to('/ujian')->with('error', 'Gagal mengirim jawaban. Data kosong.');
 
         $payload      = json_decode($payloadJson, true);
-        $jadwalId     = $payload['jadwal_id'];
-        $siswaId      = $payload['siswa_id'];
+        $jadwalId     = (string)$payload['jadwal_id'];
+        $siswaId      = (string)$payload['siswa_id'];
         $jawabanSiswa = $payload['jawaban'];
 
-        $jadwal = $this->db->table('jadwal_ujian')->where('id', $jadwalId)->get()->getRowArray();
-        $bankSoal = $this->db->table('bank_soal')->where('mapel_id', $jadwal['mapel_id'])->get()->getResultArray();
+        $jadwal   = $this->jadwalModel->find($jadwalId);
+        $bankSoal = $this->bankSoalModel->where('mapel_id', $jadwal['mapel_id'])->findAll();
 
         $kunciAsli = [];
         foreach ($bankSoal as $s) {
@@ -210,7 +173,7 @@ class UjianController extends BaseController
 
             if ($soalDB['jenis_soal'] === 'pg') {
                 $totalGanda++;
-                if (!empty($data['jawab']) && strtolower($data['jawab']) === strtolower($soalDB['kunci_jawaban'])) {
+                if (!empty($data['jawab']) && strtolower((string)$data['jawab']) === strtolower((string)$soalDB['kunci_jawaban'])) {
                     $benar++;
                 }
             }
@@ -218,18 +181,28 @@ class UjianController extends BaseController
 
         $nilai_pg = $totalGanda > 0 ? ($benar / $totalGanda) * 100 : 0;
 
-        $this->db->table('hasil_ujian')
-            ->where('jadwal_id', $jadwalId)
-            ->where('siswa_id', $siswaId)
-            ->update([
-                'jawaban_peserta'     => json_encode($jawabanSiswa),
-                'nilai_pg'            => round($nilai_pg, 2),
-                'status'              => 'completed',
-                'waktu_selesai_ujian' => date('Y-m-d H:i:s')
-            ]);
+        $hasil = $this->hasilUjianModel->getHasilByJadwalSiswa($jadwalId, $siswaId);
 
-        $this->db->table('siswa')->where('id', $siswaId)->update(['is_login' => 0]);
+        // TRANSAKSI DATABASE DIMULAI (Keamanan absolut)
+        $db = \Config\Database::connect();
+        $db->transStart();
 
-        return redirect()->to('/ujian')->with('success', 'Selamat! Ujian berhasil diselesaikan dan Nilai telah direkam.');
+        $this->hasilUjianModel->update($hasil['id'], [
+            'jawaban_peserta'     => json_encode($jawabanSiswa),
+            'nilai_pg'            => round($nilai_pg, 2),
+            'status'              => 'completed',
+            'waktu_selesai_ujian' => date('Y-m-d H:i:s')
+        ]);
+
+        $this->siswaModel->update($siswaId, ['is_login' => 0]);
+
+        $db->transComplete();
+        // TRANSAKSI SELESAI
+
+        if ($db->transStatus() === false) {
+            return redirect()->to('/ujian')->with('error', 'Terjadi kesalahan sistem saat menyimpan nilai. Segera lapor pengawas!');
+        }
+
+        return redirect()->to('/ujian')->with('success', 'Selamat! Ujian diselesaikan dan Nilai berhasil direkam.');
     }
 }

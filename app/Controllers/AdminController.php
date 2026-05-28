@@ -1,52 +1,23 @@
 <?php
 
-/**
- * ============================================================================
- * CBT PRO - ENTERPRISE EDITION
- * ============================================================================
- *
- * @package    Nurindra CBT PRO
- * @author     Nurindra
- * @copyright  2026 Nurindra CBT PRO
- * @version    1.0.0
- *
- * @description CBT PRO adalah platform Ujian Berbasis Komputer (Computer Based
- * Test) berskala Enterprise yang dirancang untuk performa tinggi, keamanan
- * absolut, dan manajemen akademik terintegrasi untuk institusi modern.
- * Aplikasi ini boleh digunakan dan di sebarluaskan secara gratis
- *
- * ----------------------------------------------------------------------------
- * HUBUNGI PENGEMBANG:
- * Contact Person : Nurindra
- * Email          : nurindra.id@gmail.com
- * WhatsApp       : +62 812-2032-9780
- * YouTube        : https://www.youtube.com/@nurindraid
- * Instagram      : https://www.instagram.com/kevinecraft
- * TikTok         : https://www.tiktok.com/@kevinecraft1
- * ----------------------------------------------------------------------------
- * PERINGATAN HAK CIPTA:
- * Kode sumber ini dilindungi oleh kekayaan intelektual. Dilarang keras
- * memodifikasi atau menjual ulang bagian manapun dari aplikasi ini 
- * tanpa izin tertulis dari pihak pengembang.
- * ============================================================================
- */
-
-
 namespace App\Controllers;
 
-use App\Controllers\BaseController;
-use CodeIgniter\Database\BaseConnection;
+use App\Models\StaffModel;
+use App\Models\PengaturanModel;
+use CodeIgniter\HTTP\ResponseInterface;
 
 class AdminController extends BaseController
 {
-    protected BaseConnection $db;
+    protected StaffModel $staffModel;
+    protected PengaturanModel $pengaturanModel;
 
     public function __construct()
     {
-        $this->db = \Config\Database::connect();
+        $this->staffModel      = new StaffModel();
+        $this->pengaturanModel = new PengaturanModel();
     }
 
-    private function checkAdmin()
+    private function checkAdmin(): void
     {
         if (session()->get('role') !== 'admin') {
             header('Location: /panel/dashboard');
@@ -54,132 +25,122 @@ class AdminController extends BaseController
         }
     }
 
-    public function staff()
+    public function staff(): string
     {
         $this->checkAdmin();
 
-        $staff = $this->db->table('staff')->orderBy('role', 'ASC')->orderBy('nama_lengkap', 'ASC')->get()->getResultArray();
-
-        $totalAdmin = $this->db->table('staff')->where('role', 'admin')->countAllResults();
-        $totalPanitia = $this->db->table('staff')->where('is_panitia', 1)->countAllResults();
-
         $data = [
             'title'        => 'Manajemen Staff - CBT PRO',
-            'staff'        => $staff,
-            'totalAdmin'   => $totalAdmin,
-            'totalPanitia' => $totalPanitia
+            'staff'        => $this->staffModel->orderBy('role', 'ASC')->orderBy('nama_lengkap', 'ASC')->findAll(),
+            'totalAdmin'   => $this->staffModel->countByRole('admin'),
+            'totalPanitia' => $this->staffModel->countPanitia()
         ];
 
         return view('panel/manajemen_staff', $data);
     }
 
-    public function storeStaff()
+    public function storeStaff(): ResponseInterface
     {
         $this->checkAdmin();
 
-        $username  = $this->request->getPost('username');
-        $role      = $this->request->getPost('role');
+        $username  = (string)$this->request->getPost('username');
+        $role      = (string)$this->request->getPost('role');
         $isPanitia = $this->request->getPost('is_panitia') ? 1 : 0;
 
-        if ($this->db->table('staff')->where('username', $username)->countAllResults() > 0) {
+        if ($this->staffModel->where('username', $username)->countAllResults() > 0) {
             return redirect()->back()->with('error', 'Username sudah digunakan!');
         }
 
         if ($role === 'admin') {
-            $cekAdmin = $this->db->table('staff')->where('role', 'admin')->countAllResults();
-            if ($cekAdmin >= 1) return redirect()->back()->with('error', 'Gagal! Admin maksimal hanya boleh 1 orang.');
+            if ($this->staffModel->countByRole('admin') >= 1) {
+                return redirect()->back()->with('error', 'Gagal! Admin maksimal hanya boleh 1 orang.');
+            }
             $isPanitia = 0;
         }
 
-        if ($isPanitia == 1) {
-            $cekPanitia = $this->db->table('staff')->where('is_panitia', 1)->countAllResults();
-            if ($cekPanitia >= 3) return redirect()->back()->with('error', 'Gagal! Panitia maksimal hanya boleh 3 orang.');
+        if ($isPanitia === 1 && $this->staffModel->countPanitia() >= 3) {
+            return redirect()->back()->with('error', 'Gagal! Panitia maksimal hanya boleh 3 orang.');
         }
 
-        $passwordPlain = $this->request->getPost('password') ?: 'password123';
+        $passwordPlain = (string)$this->request->getPost('password') ?: 'password123';
 
-        $dataInsert = [
+        $this->staffModel->insert([
             'username'     => $username,
             'password'     => password_hash($passwordPlain, PASSWORD_DEFAULT),
-            'nama_lengkap' => strtoupper($this->request->getPost('nama_lengkap')),
+            'nama_lengkap' => strtoupper((string)$this->request->getPost('nama_lengkap')),
             'role'         => $role,
             'is_panitia'   => $isPanitia,
             'created_at'   => date('Y-m-d H:i:s')
-        ];
+        ]);
 
-        $this->db->table('staff')->insert($dataInsert);
         return redirect()->back()->with('success', 'Staff baru berhasil ditambahkan.');
     }
 
-    public function updateStaff(string $id)
+    public function updateStaff(string $id): ResponseInterface
     {
         $this->checkAdmin();
-
-        $staffLama = $this->db->table('staff')->where('id', $id)->get()->getRowArray();
+        $staffLama = $this->staffModel->find($id);
 
         if ($staffLama['username'] === 'admin') {
             $username  = 'admin';
             $role      = 'admin';
             $isPanitia = 0;
         } else {
-            $username  = $this->request->getPost('username');
-            $role      = $this->request->getPost('role') ?? 'guru';
+            $username  = (string)$this->request->getPost('username');
+            $role      = (string)($this->request->getPost('role') ?? 'guru');
             $isPanitia = $this->request->getPost('is_panitia') ? 1 : 0;
 
             if ($role === 'admin') {
-                $cekAdmin = $this->db->table('staff')->where('role', 'admin')->where('id !=', $id)->countAllResults();
-                if ($cekAdmin >= 1) return redirect()->back()->with('error', 'Gagal! Admin maksimal hanya boleh 1 orang.');
+                if ($this->staffModel->where('role', 'admin')->where('id !=', $id)->countAllResults() >= 1) {
+                    return redirect()->back()->with('error', 'Gagal! Admin maksimal hanya boleh 1 orang.');
+                }
                 $isPanitia = 0;
             }
 
-            if ($isPanitia == 1) {
-                $cekPanitia = $this->db->table('staff')->where('is_panitia', 1)->where('id !=', $id)->countAllResults();
-                if ($cekPanitia >= 3) return redirect()->back()->with('error', 'Gagal! Panitia maksimal hanya boleh 3 orang.');
+            if ($isPanitia === 1 && $this->staffModel->where('is_panitia', 1)->where('id !=', $id)->countAllResults() >= 3) {
+                return redirect()->back()->with('error', 'Gagal! Panitia maksimal hanya boleh 3 orang.');
             }
         }
 
         $dataUpdate = [
             'username'     => $username,
-            'nama_lengkap' => strtoupper($this->request->getPost('nama_lengkap')),
+            'nama_lengkap' => strtoupper((string)$this->request->getPost('nama_lengkap')),
             'role'         => $role,
             'is_panitia'   => $isPanitia,
         ];
 
-        $passwordBaru = $this->request->getPost('password');
+        $passwordBaru = (string)$this->request->getPost('password');
         if (!empty($passwordBaru)) {
             $dataUpdate['password'] = password_hash($passwordBaru, PASSWORD_DEFAULT);
         }
 
-        $this->db->table('staff')->where('id', $id)->update($dataUpdate);
+        $this->staffModel->update($id, $dataUpdate);
         return redirect()->back()->with('success', 'Data Staff berhasil diperbarui.');
     }
 
-    public function deleteStaff(string $id)
+    public function deleteStaff(string $id): ResponseInterface
     {
         $this->checkAdmin();
-
-        $staffTarget = $this->db->table('staff')->where('id', $id)->get()->getRowArray();
+        $staffTarget = $this->staffModel->find($id);
 
         if ($staffTarget['username'] === 'admin') {
             return redirect()->back()->with('error', 'Akses Ditolak! Akun Super Admin utama tidak boleh dihapus.');
         }
 
-        if ($id == session()->get('id')) {
+        if ($id === (string)session()->get('id')) {
             return redirect()->back()->with('error', 'Anda tidak bisa menghapus akun Anda sendiri saat sedang login!');
         }
 
-        $this->db->table('staff')->where('id', $id)->delete();
+        $this->staffModel->delete($id);
         return redirect()->back()->with('success', 'Akun Staff berhasil dihapus.');
     }
 
-    public function pengaturan()
+    public function pengaturan(): string
     {
         $this->checkAdmin();
 
-        $builder = $this->db->table('pengaturan');
-
-        if ($builder->countAllResults() == 0) {
-            $builder->insert([
+        if ($this->pengaturanModel->countAllResults() === 0) {
+            $this->pengaturanModel->insert([
                 'nama_sekolah'       => 'SMA NEGERI 1 CBT PRO',
                 'kepala_sekolah'     => 'Nama Kepala Sekolah, M.Pd',
                 'nip_kepala_sekolah' => '198001012005011001',
@@ -191,34 +152,33 @@ class AdminController extends BaseController
 
         $data = [
             'title'      => 'Pengaturan Sistem - CBT PRO',
-            'pengaturan' => $builder->where('id', 1)->get()->getRowArray()
+            'pengaturan' => $this->pengaturanModel->find(1)
         ];
 
         return view('panel/pengaturan', $data);
     }
 
-    public function updatePengaturan()
+    public function updatePengaturan(): ResponseInterface
     {
         $this->checkAdmin();
 
         $dataUpdate = [
-            'nama_sekolah'       => strtoupper($this->request->getPost('nama_sekolah')),
-            'kepala_sekolah'     => $this->request->getPost('kepala_sekolah'),
-            'nip_kepala_sekolah' => $this->request->getPost('nip_kepala_sekolah'),
-            'alamat_sekolah'     => $this->request->getPost('alamat_sekolah'),
-            'email_telepon'      => $this->request->getPost('email_telepon'),
-            'tahun_ajaran'       => $this->request->getPost('tahun_ajaran'),
-            'semester'           => $this->request->getPost('semester'),
-            'zona_waktu'         => $this->request->getPost('zona_waktu'),
+            'nama_sekolah'       => strtoupper((string)$this->request->getPost('nama_sekolah')),
+            'kepala_sekolah'     => (string)$this->request->getPost('kepala_sekolah'),
+            'nip_kepala_sekolah' => (string)$this->request->getPost('nip_kepala_sekolah'),
+            'alamat_sekolah'     => (string)$this->request->getPost('alamat_sekolah'),
+            'email_telepon'      => (string)$this->request->getPost('email_telepon'),
+            'tahun_ajaran'       => (string)$this->request->getPost('tahun_ajaran'),
+            'semester'           => (string)$this->request->getPost('semester'),
+            'zona_waktu'         => (string)$this->request->getPost('zona_waktu'),
             'block_multi_login'  => $this->request->getPost('block_multi_login') ? 1 : 0,
             'maintenance_mode'   => $this->request->getPost('maintenance_mode') ? 1 : 0,
         ];
 
         $logoFile = $this->request->getFile('logo');
         if ($logoFile && $logoFile->isValid() && !$logoFile->hasMoved()) {
-
-            $pengaturanLama = $this->db->table('pengaturan')->where('id', 1)->get()->getRowArray();
-            if ($pengaturanLama && $pengaturanLama['logo']) {
+            $pengaturanLama = $this->pengaturanModel->find(1);
+            if ($pengaturanLama && !empty($pengaturanLama['logo'])) {
                 $oldPath = FCPATH . 'uploads/' . $pengaturanLama['logo'];
                 if (file_exists($oldPath)) unlink($oldPath);
             }
@@ -228,7 +188,7 @@ class AdminController extends BaseController
             $dataUpdate['logo'] = $newName;
         }
 
-        $this->db->table('pengaturan')->where('id', 1)->update($dataUpdate);
+        $this->pengaturanModel->update(1, $dataUpdate);
         return redirect()->back()->with('success', 'Pengaturan sistem berhasil diperbarui.');
     }
 }

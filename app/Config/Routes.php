@@ -32,56 +32,56 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
 
     $routes->group('', ['filter' => 'auth:panitia'], static function ($routes) {
 
-        $routes->get('ruangan', 'PanitiaController::ruangan');
-        $routes->post('ruangan/store', 'PanitiaController::storeRuangan');
-        $routes->post('ruangan/delete/(:num)', 'PanitiaController::deleteRuangan/$1');
-        $routes->post('ruangan/plot-siswa', 'PanitiaController::plotSiswaRuangan');
-        $routes->post('ruangan/kosongkan/(:num)', 'PanitiaController::kosongkanRuangan/$1');
+        $routes->get('siswa', 'SiswaController::index');
+        $routes->post('siswa/store', 'SiswaController::store');
+        $routes->post('siswa/update/(:num)', 'SiswaController::update/$1');
+        $routes->post('siswa/delete-batch', 'SiswaController::deleteBatch');
+        $routes->post('siswa/delete/(:num)', 'SiswaController::delete/$1');
+        $routes->post('siswa/import', 'SiswaController::import');
 
-        $routes->get('siswa', 'PanitiaController::siswa');
-        $routes->post('siswa/store', 'PanitiaController::storeSiswa');
-        $routes->post('siswa/update/(:num)', 'PanitiaController::updateSiswa/$1');
-        $routes->post('siswa/delete-batch', 'PanitiaController::deleteSiswaBatch');
-        $routes->post('siswa/delete/(:num)', 'PanitiaController::deleteSiswa/$1');
-        $routes->post('siswa/import', 'PanitiaController::importSiswa');
+        $routes->get('ruangan', 'RuanganController::index');
+        $routes->post('ruangan/store', 'RuanganController::store');
+        $routes->post('ruangan/delete/(:num)', 'RuanganController::delete/$1');
+        $routes->post('ruangan/plot-siswa', 'RuanganController::plotSiswa');
+        $routes->post('ruangan/kosongkan/(:num)', 'RuanganController::kosongkan/$1');
 
-        $routes->get('mapel', 'PanitiaController::mapel');
-        $routes->post('mapel/store', 'PanitiaController::storeMapel');
-        $routes->post('mapel/update/(:num)', 'PanitiaController::updateMapel/$1');
-        $routes->post('mapel/delete/(:num)', 'PanitiaController::deleteMapel/$1');
-        $routes->post('mapel/sync-guru', 'PanitiaController::syncGuruMapel');
+        $routes->get('mapel', 'MapelController::index');
+        $routes->post('mapel/store', 'MapelController::store');
+        $routes->post('mapel/update/(:num)', 'MapelController::update/$1');
+        $routes->post('mapel/delete/(:num)', 'MapelController::delete/$1');
+        $routes->post('mapel/sync-guru', 'MapelController::syncGuru');
 
-        $routes->get('jadwal', 'PanitiaController::jadwal');
-        $routes->post('jadwal/store', 'PanitiaController::storeJadwal');
-        $routes->post('jadwal/update/(:num)', 'PanitiaController::updateJadwal/$1');
-        $routes->post('jadwal/delete/(:num)', 'PanitiaController::deleteJadwal/$1');
-        $routes->post('jadwal/plot-pengawas', 'PanitiaController::plotPengawas');
-        $routes->post('jadwal/generate-json/(:num)', 'PanitiaController::generateJson/$1');
+        $routes->get('jadwal', 'JadwalController::index');
+        $routes->post('jadwal/store', 'JadwalController::store');
+        $routes->post('jadwal/update/(:num)', 'JadwalController::update/$1');
+        $routes->post('jadwal/delete/(:num)', 'JadwalController::delete/$1');
+        $routes->post('jadwal/plot-pengawas', 'JadwalController::plotPengawas');
+        $routes->post('jadwal/generate-json/(:num)', 'JadwalController::generateJson/$1');
 
-        $routes->get('jenis-ujian', 'PanitiaController::jenisUjian');
-        $routes->post('jenis-ujian/store', 'PanitiaController::storeJenisUjian');
-        $routes->post('jenis-ujian/update/(:num)', 'PanitiaController::updateJenisUjian/$1');
-        $routes->post('jenis-ujian/delete/(:num)', 'PanitiaController::deleteJenisUjian/$1');
+        $routes->get('jenis-ujian', 'JenisUjianController::index');
+        $routes->post('jenis-ujian/store', 'JenisUjianController::store');
+        $routes->post('jenis-ujian/update/(:num)', 'JenisUjianController::update/$1');
+        $routes->post('jenis-ujian/delete/(:num)', 'JenisUjianController::delete/$1');
 
-        $routes->get('cetak-kartu', 'PanitiaController::cetakKartu');
+        $routes->get('cetak-kartu', 'SiswaController::cetakKartu');
     });
 
     $routes->group('', ['filter' => 'auth:guru'], static function ($routes) {
-        $routes->get('bank-soal', 'GuruController::bankSoal');
-        $routes->get('bank-soal/create', 'GuruController::createSoal');
-        $routes->post('bank-soal/store', 'GuruController::storeSoal');
-        $routes->get('bank-soal/edit/(:num)', 'GuruController::editSoal/$1');
-        $routes->post('bank-soal/update/(:num)', 'GuruController::updateSoal/$1');
-        $routes->get('bank-soal/export/(:num)', 'GuruController::exportSoal/$1');
-        $routes->post('bank-soal/import', 'GuruController::importSoal');
-        $routes->post('bank-soal/delete/(:num)', 'GuruController::deleteSoal/$1');
+        $routes->get('bank-soal', 'GuruController::index');
+        $routes->get('bank-soal/create', 'GuruController::create');
+        $routes->post('bank-soal/store', 'GuruController::store');
+        $routes->get('bank-soal/edit/(:num)', 'GuruController::edit/$1');
+        $routes->post('bank-soal/update/(:num)', 'GuruController::update/$1');
+        $routes->get('bank-soal/export/(:num)', 'GuruController::export/$1');
+        $routes->post('bank-soal/import', 'GuruController::import');
+        $routes->post('bank-soal/delete/(:num)', 'GuruController::delete/$1');
         $routes->post('bank-soal/upload-gambar', 'GuruController::uploadGambar');
     });
 
     $routes->group('ruang-pengawas', static function ($routes) {
         $routes->get('/', 'PengawasController::index');
         $routes->get('monitor/(:num)', 'PengawasController::monitor/$1');
-        $routes->post('generate-token/(:num)', 'PengawasController::generateToken/$1');
+        # $routes->post('generate-token/(:num)', 'PengawasController::generateToken/$1');
         $routes->post('generate-token-ajax/(:num)', 'PengawasController::generateTokenAjax/$1');
         $routes->post('reset-login/(:num)', 'PengawasController::resetLogin/$1');
         $routes->post('force-selesai/(:num)/(:num)', 'PengawasController::forceSelesai/$1/$2');

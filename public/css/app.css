@@ -882,10 +882,6 @@ video {
   height: 4rem;
 }
 
-.h-20 {
-  height: 5rem;
-}
-
 .h-24 {
   height: 6rem;
 }
@@ -2075,10 +2071,6 @@ video {
 
 .text-\[6px\] {
   font-size: 6px;
-}
-
-.text-\[7px\] {
-  font-size: 7px;
 }
 
 .text-\[8px\] {

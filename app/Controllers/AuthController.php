@@ -1,44 +1,14 @@
 <?php
 
-/**
- * ============================================================================
- * CBT PRO - ENTERPRISE EDITION
- * ============================================================================
- *
- * @package    Nurindra CBT PRO
- * @author     Nurindra
- * @copyright  2026 Nurindra CBT PRO
- * @version    1.0.0
- *
- * @description CBT PRO adalah platform Ujian Berbasis Komputer (Computer Based
- * Test) berskala Enterprise yang dirancang untuk performa tinggi, keamanan
- * absolut, dan manajemen akademik terintegrasi untuk institusi modern.
- * Aplikasi ini boleh digunakan dan di sebarluaskan secara gratis
- *
- * ----------------------------------------------------------------------------
- * HUBUNGI PENGEMBANG:
- * Contact Person : Nurindra
- * Email          : nurindra.id@gmail.com
- * WhatsApp       : +62 812-2032-9780
- * YouTube        : https://www.youtube.com/@nurindraid
- * Instagram      : https://www.instagram.com/kevinecraft
- * TikTok         : https://www.tiktok.com/@kevinecraft1
- * ----------------------------------------------------------------------------
- * PERINGATAN HAK CIPTA:
- * Kode sumber ini dilindungi oleh kekayaan intelektual. Dilarang keras
- * memodifikasi atau menjual ulang bagian manapun dari aplikasi ini 
- * tanpa izin tertulis dari pihak pengembang.
- * ============================================================================
- */
-
-
 namespace App\Controllers;
 
-use App\Controllers\BaseController;
+use App\Models\StaffModel;
+use App\Models\SiswaModel;
+use CodeIgniter\HTTP\ResponseInterface;
 
 class AuthController extends BaseController
 {
-    public function index()
+    public function index(): ResponseInterface|string
     {
         if (session()->get('logged_in')) {
             return session()->get('user_type') === 'staff'
@@ -49,25 +19,23 @@ class AuthController extends BaseController
         return view('auth/login');
     }
 
-    public function process()
+    public function process(): ResponseInterface
     {
-        $username = $this->request->getPost('username');
-        $password = $this->request->getPost('password');
+        $username = (string)$this->request->getPost('username');
+        $password = (string)$this->request->getPost('password');
 
-        $db = \Config\Database::connect();
+        $staffModel = new StaffModel();
+        $siswaModel = new SiswaModel();
 
-        // 1. Ambil data konfigurasi dari tabel pengaturan
-        $pengaturan = $db->table('pengaturan')->where('id', 1)->get()->getRowArray();
-        $isMaintenance = $pengaturan['maintenance_mode'] ?? 0;
-        $isBlockMultiLogin = $pengaturan['block_multi_login'] ?? 0;
+        // Mengambil properti pengaturan global yang sudah diinisiasi di BaseController (Fase 1)
+        $isMaintenance     = (int)($this->pengaturanGlobal['maintenance_mode'] ?? 0);
+        $isBlockMultiLogin = (int)($this->pengaturanGlobal['block_multi_login'] ?? 0);
 
-        $staff = $db->table('staff')->where('username', $username)->get()->getRowArray();
+        $staff = $staffModel->where('username', $username)->first();
 
         if ($staff) {
-            if (password_verify($password, $staff['password'])) {
-
-                // Cek Maintenance Mode untuk Staff: Hanya admin yang diizinkan masuk
-                if ($isMaintenance == 1 && $staff['role'] !== 'admin') {
+            if (password_verify($password, (string)$staff['password'])) {
+                if ($isMaintenance === 1 && $staff['role'] !== 'admin') {
                     return redirect()->back()->with('error', 'Sistem sedang dalam pemeliharaan (Maintenance). Akses hanya untuk Administrator.');
                 }
 
@@ -85,22 +53,19 @@ class AuthController extends BaseController
             return redirect()->back()->with('error', 'Password Staff salah.');
         }
 
-        $siswa = $db->table('siswa')->where('nisn', $username)->get()->getRowArray();
+        $siswa = $siswaModel->where('nisn', $username)->first();
 
         if ($siswa) {
-            if (password_verify($password, $siswa['password'])) {
-
-                // Cek Maintenance Mode untuk Siswa: Tidak diizinkan masuk sama sekali
-                if ($isMaintenance == 1) {
+            if (password_verify($password, (string)$siswa['password'])) {
+                if ($isMaintenance === 1) {
                     return redirect()->back()->with('error', 'Sistem sedang ditutup sementara oleh Panitia. Silakan tunggu informasi lebih lanjut.');
                 }
 
-                // Cek Block Multi Login: Berlaku jika diaktifkan di panel pengaturan
-                if ($isBlockMultiLogin == 1 && $siswa['is_login'] == 1) {
+                if ($isBlockMultiLogin === 1 && (int)$siswa['is_login'] === 1) {
                     return redirect()->back()->with('error', 'Akun sedang aktif di perangkat lain! Lapor Pengawas untuk mereset sesi Anda.');
                 }
 
-                $db->table('siswa')->where('id', $siswa['id'])->update([
+                $siswaModel->update($siswa['id'], [
                     'is_login'    => 1,
                     'last_active' => date('Y-m-d H:i:s')
                 ]);
@@ -124,13 +89,13 @@ class AuthController extends BaseController
         return redirect()->back()->with('error', 'Username / NISN tidak terdaftar di sistem.');
     }
 
-    public function logout()
+    public function logout(): ResponseInterface
     {
         $session = session();
 
         if ($session->get('user_type') === 'siswa') {
-            $db = \Config\Database::connect();
-            $db->table('siswa')->where('id', $session->get('id'))->update(['is_login' => 0]);
+            $siswaModel = new SiswaModel();
+            $siswaModel->update((string)$session->get('id'), ['is_login' => 0]);
         }
 
         $session->destroy();

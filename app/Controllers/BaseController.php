@@ -4,33 +4,7 @@
  * ============================================================================
  * CBT PRO - ENTERPRISE EDITION
  * ============================================================================
- *
- * @package    Nurindra CBT PRO
- * @author     Nurindra
- * @copyright  2026 Nurindra CBT PRO
- * @version    1.0.0
- *
- * @description CBT PRO adalah platform Ujian Berbasis Komputer (Computer Based
- * Test) berskala Enterprise yang dirancang untuk performa tinggi, keamanan
- * absolut, dan manajemen akademik terintegrasi untuk institusi modern.
- * Aplikasi ini boleh digunakan dan di sebarluaskan secara gratis
- *
- * ----------------------------------------------------------------------------
- * HUBUNGI PENGEMBANG:
- * Contact Person : Nurindra
- * Email          : nurindra.id@gmail.com
- * WhatsApp       : +62 812-2032-9780
- * YouTube        : https://www.youtube.com/@nurindraid
- * Instagram      : https://www.instagram.com/kevinecraft
- * TikTok         : https://www.tiktok.com/@kevinecraft1
- * ----------------------------------------------------------------------------
- * PERINGATAN HAK CIPTA:
- * Kode sumber ini dilindungi oleh kekayaan intelektual. Dilarang keras
- * memodifikasi atau menjual ulang bagian manapun dari aplikasi ini 
- * tanpa izin tertulis dari pihak pengembang.
- * ============================================================================
  */
-
 
 namespace App\Controllers;
 
@@ -41,33 +15,50 @@ use Psr\Log\LoggerInterface;
 
 abstract class BaseController extends Controller
 {
-    /**
-     * Be sure to declare properties for any property fetch you initialized.
-     * The creation of dynamic property is deprecated in PHP 8.2.
-     */
+    protected $helpers = [];
 
-    // protected $session;
+    // Variabel Global dengan Explicit Type Declaration
+    protected ?array $pengaturanGlobal = null;
+    protected string $tahunAktif = '2025/2026';
+    protected string $smtAktif = 'ganjil';
 
-    /**
-     * @return void
-     */
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
-        // Load here all helpers you want to be available in your controllers that extend BaseController.
-        // Caution: Do not put the this below the parent::initController() call below.
-        // $this->helpers = ['form', 'url'];
-
-        // Caution: Do not edit this line.
         parent::initController($request, $response, $logger);
 
-        // Preload any models, libraries, etc, here.
-        // $this->session = service('session');
+        // ==========================================================================
+        // 1. INJEKSI KEAMANAN GLOBAL (HTTP SECURITY HEADERS)
+        // ==========================================================================
 
-        // Ambil data konfigurasi untuk sinkronisasi zona waktu aplikasi secara global
+        // Mencegah Clickjacking (Aplikasi tidak bisa disisipkan ke <iframe> web hacker)
+        $this->response->setHeader('X-Frame-Options', 'SAMEORIGIN');
+
+        // Memaksa browser mengaktifkan filter XSS (Cross-Site Scripting)
+        $this->response->setHeader('X-XSS-Protection', '1; mode=block');
+
+        // Mencegah MIME-Sniffing (mencegah browser mengeksekusi file gambar/teks sebagai script)
+        $this->response->setHeader('X-Content-Type-Options', 'nosniff');
+
+        // Mencegah data 'Referrer' bocor ke website lain saat klik link keluar
+        $this->response->setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+        // (Opsional) Memaksa koneksi menggunakan HTTPS selama 1 tahun penuh jika SSL tersedia
+        $this->response->setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
+        // ==========================================================================
+        // 2. INISIASI PENGATURAN GLOBAL DAN ZONA WAKTU
+        // ==========================================================================
         $db = \Config\Database::connect();
-        $pengaturan = $db->table('pengaturan')->where('id', 1)->get()->getRowArray();
-        if ($pengaturan && !empty($pengaturan['zona_waktu'])) {
-            date_default_timezone_set($pengaturan['zona_waktu']);
+        $this->pengaturanGlobal = $db->table('pengaturan')->where('id', 1)->get()->getRowArray();
+
+        if ($this->pengaturanGlobal) {
+            if (!empty($this->pengaturanGlobal['zona_waktu'])) {
+                date_default_timezone_set($this->pengaturanGlobal['zona_waktu']);
+            }
+
+            // Casting (string) untuk memastikan Strict Type Intelephense tetap aman
+            $this->tahunAktif = (string)($this->pengaturanGlobal['tahun_ajaran'] ?? '2025/2026');
+            $this->smtAktif   = (string)($this->pengaturanGlobal['semester'] ?? 'ganjil');
         }
     }
 }
