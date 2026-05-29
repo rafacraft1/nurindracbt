@@ -335,21 +335,17 @@
             btnBulkDelete.classList.remove('flex');
         }
 
-        // Cek apakah semua item di halaman INI tercentang
         if (checkItems.length > 0) {
             const allCheckedOnPage = Array.from(checkItems).every(item => item.checked);
             checkAll.checked = allCheckedOnPage;
         }
     }
 
-    // Inisialisasi saat DOM dimuat
     checkItems.forEach(item => {
-        // Restore status centang jika ID ada di array session
         if (selectedIds.includes(item.value)) {
             item.checked = true;
         }
 
-        // Listener jika di klik manual per item
         item.addEventListener('change', function() {
             if (this.checked) {
                 if (!selectedIds.includes(this.value)) selectedIds.push(this.value);
@@ -360,10 +356,8 @@
         });
     });
 
-    // Panggil update UI pertama kali halaman diload
     updateBulkDeleteUI();
 
-    // Listener Check All (Hanya mempengaruhi yang tampil di DOM / Halaman Saat Ini)
     if (checkAll) {
         checkAll.addEventListener('change', function() {
             const isChecked = this.checked;
@@ -415,7 +409,6 @@
                     }
 
                     if (res.status === 'success') {
-                        // Bersihkan session storage karena data sudah terhapus
                         sessionStorage.removeItem('selectedSiswaIds');
                         Swal.fire('Berhasil!', res.message, 'success').then(() => window.location.reload());
                     } else {
@@ -506,7 +499,7 @@
     }
 
     // ==========================================
-    // IMPORT EXCEL
+    // IMPORT EXCEL DENGAN AJAX CHUNKING
     // ==========================================
     const formImportSiswa = document.getElementById('formImportSiswa');
     if (formImportSiswa) {
@@ -575,13 +568,16 @@
 
                         const totalRows = resInit.total;
                         const tempId = resInit.temp_id;
-                        const chunkSize = 1;
+
+                        // KUNCI OPTIMASI: Chunk Size diset 25 agar memori dan progress bar stabil!
+                        const chunkSize = 25;
 
                         let totalSuccess = 0;
                         let totalFailed = 0;
 
                         document.getElementById('importProgressCount').innerText = `0 / ${totalRows}`;
 
+                        // Looping memproses tiap chunk (potongan data)
                         for (let offset = 0; offset < totalRows; offset += chunkSize) {
                             let chunkData = new window.FormData();
                             chunkData.append('step', 'process');
@@ -623,6 +619,7 @@
                             </span>
                         `;
 
+                        // Tahap Akhir: Menghapus file temporari di server
                         let finishData = new window.FormData();
                         finishData.append('step', 'finish');
                         finishData.append('temp_id', tempId);

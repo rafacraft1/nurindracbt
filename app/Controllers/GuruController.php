@@ -36,9 +36,25 @@ class GuruController extends BaseController
                 ->findAll();
         }
 
+        // OPTIMASI: Bulk Grouping Count untuk menyelesaikan masalah N+1 Query
+        $mapelIds = array_column($mapel, 'id');
+        $counts = [];
+
+        if (!empty($mapelIds)) {
+            $builderCounts = $db->table('bank_soal')
+                ->select('mapel_id, jenis_soal, COUNT(id) as total')
+                ->whereIn('mapel_id', $mapelIds)
+                ->groupBy('mapel_id, jenis_soal')
+                ->get()->getResultArray();
+
+            foreach ($builderCounts as $row) {
+                $counts[$row['mapel_id']][$row['jenis_soal']] = $row['total'];
+            }
+        }
+
         foreach ($mapel as &$m) {
-            $m['total_pg']    = $this->bankSoalModel->countSoalByJenis((string)$m['id'], 'pg');
-            $m['total_essai'] = $this->bankSoalModel->countSoalByJenis((string)$m['id'], 'essai');
+            $m['total_pg']    = $counts[$m['id']]['pg'] ?? 0;
+            $m['total_essai'] = $counts[$m['id']]['essai'] ?? 0;
         }
 
         $filterMapelId = (string)($this->request->getGet('mapel') ?? (!empty($mapel) ? $mapel[0]['id'] : '0'));
@@ -122,6 +138,11 @@ class GuruController extends BaseController
             return redirect()->to('/panel/bank-soal')->with('error', 'Data soal tidak ditemukan.');
         }
 
+        // VALIDASI IDOR: Mencegah manipulasi lintas guru
+        if (session()->get('role') !== 'admin' && $soal['guru_id'] != session()->get('id')) {
+            return redirect()->to('/panel/bank-soal')->with('error', 'Akses Ilegal! Anda tidak berhak mengubah soal milik guru lain.');
+        }
+
         $data = [
             'title' => 'Edit Soal - CBT PRO',
             'soal'  => $soal,
@@ -135,6 +156,11 @@ class GuruController extends BaseController
     {
         $soalLama = $this->bankSoalModel->find($id);
         if (!$soalLama) return redirect()->back()->with('error', 'Soal tidak ditemukan.');
+
+        // VALIDASI IDOR: Mencegah manipulasi lintas guru
+        if (session()->get('role') !== 'admin' && $soalLama['guru_id'] != session()->get('id')) {
+            return redirect()->to('/panel/bank-soal')->with('error', 'Akses Ilegal! Anda tidak berhak mengubah soal milik guru lain.');
+        }
 
         $jenisSoal = (string)$this->request->getPost('jenis_soal');
         $mapelId   = (string)$this->request->getPost('mapel_id');
@@ -179,6 +205,16 @@ class GuruController extends BaseController
             $dataUpdate['kunci_jawaban'] = (string)$this->request->getPost('kunci_essai') ?: null;
         }
 
+        // OPTIMASI: Garbage Collector untuk Gambar WebP Summernote yang dihapus saat Update Soal
+        $htmlLama = $soalLama['pertanyaan'] . ' ' . $soalLama['opsi_jawaban'] . ' ' . $soalLama['kunci_jawaban'];
+        $htmlBaru = $dataUpdate['pertanyaan'] . ' ' . $dataUpdate['opsi_jawaban'] . ' ' . $dataUpdate['kunci_jawaban'];
+
+        $imagesLama = $this->extractLocalImages($htmlLama);
+        $imagesBaru = $this->extractLocalImages($htmlBaru);
+
+        $imagesToDelete = array_diff($imagesLama, $imagesBaru);
+        $this->deleteLocalImages($imagesToDelete);
+
         $this->bankSoalModel->update($id, $dataUpdate);
         return redirect()->to('/panel/bank-soal?mapel=' . $mapelId)->with('success', 'Soal berhasil diperbarui!');
     }
@@ -186,13 +222,25 @@ class GuruController extends BaseController
     public function delete(string $id): ResponseInterface
     {
         $soal = $this->bankSoalModel->find($id);
-        if ($soal && !empty($soal['file_audio'])) {
+        if (!$soal) return redirect()->back()->with('error', 'Soal tidak ditemukan.');
+
+        // VALIDASI IDOR: Mencegah manipulasi lintas guru
+        if (session()->get('role') !== 'admin' && $soal['guru_id'] != session()->get('id')) {
+            return redirect()->to('/panel/bank-soal')->with('error', 'Akses Ilegal! Anda tidak berhak menghapus soal milik guru lain.');
+        }
+
+        if (!empty($soal['file_audio'])) {
             $path = FCPATH . 'uploads/audio/' . $soal['file_audio'];
             if (file_exists($path)) unlink($path);
         }
 
+        // OPTIMASI: Garbage Collector - Menghapus fisik gambar WebP di server secara otomatis
+        $htmlSoal = $soal['pertanyaan'] . ' ' . $soal['opsi_jawaban'] . ' ' . $soal['kunci_jawaban'];
+        $images   = $this->extractLocalImages($htmlSoal);
+        $this->deleteLocalImages($images);
+
         $this->bankSoalModel->delete($id);
-        return redirect()->back()->with('success', 'Soal berhasil dihapus.');
+        return redirect()->back()->with('success', 'Soal beserta file medianya berhasil dihapus bersih.');
     }
 
     public function export(string $mapelId)
@@ -257,5 +305,26 @@ class GuruController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Gagal memproses file gambar.']);
         }
         return $this->response->setJSON(['success' => false, 'message' => 'Invalid request.']);
+    }
+
+    private function extractLocalImages(string $html): array
+    {
+        $images = [];
+        if (preg_match_all('/src=["\']([^"\']+\/uploads\/soal\/([^"\']+))["\']/i', $html, $matches)) {
+            foreach ($matches[2] as $filename) {
+                $images[] = $filename;
+            }
+        }
+        return $images;
+    }
+
+    private function deleteLocalImages(array $filenames): void
+    {
+        foreach ($filenames as $file) {
+            $path = FCPATH . 'uploads/soal/' . $file;
+            if (file_exists($path)) {
+                unlink($path);
+            }
+        }
     }
 }

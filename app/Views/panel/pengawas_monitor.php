@@ -15,7 +15,7 @@
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
     <div>
         <a href="/panel/ruang-pengawas" class="text-sm text-blue-600 hover:underline mb-1 inline-block">← Kembali ke Lobi</a>
-        <h2 class="text-2xl font-bold text-slate-800 uppercase"><?= esc($jadwal['nama_mapel']) ?></h2>
+        <h2 class="text-2xl font-bold text-slate-800 uppercase"><?= esc($jadwal['nama_mapel']) ?> <?= strpos($jadwal['id_gabungan'], '-') !== false ? '<span class="bg-purple-100 text-purple-700 text-sm px-2 py-0.5 rounded ml-2">Gabungan Lintas Kelas</span>' : '' ?></h2>
         <p class="text-slate-500 font-semibold mt-1">🚪 <?= esc($jadwal['nama_ruangan']) ?> &nbsp;|&nbsp; ⏰ Durasi: <?= $jadwal['durasi'] ?> Menit</p>
     </div>
 </div>
@@ -76,18 +76,23 @@
             </thead>
             <tbody id="tabelSiswa" class="divide-y divide-slate-100">
                 <?php $no = 1;
-                foreach ($siswa as $s): ?>
+                foreach ($siswa as $s):
+                    // SOLUSI BUG: Menggunakan Fallback Jadwal Utama jika record riwayat siswa masih kosong
+                    $idJadwalKirim = !empty($s['actual_jadwal_id']) ? $s['actual_jadwal_id'] : $jadwal['id'];
+                ?>
                     <tr class="hover:bg-slate-50 transition-colors row-siswa">
                         <td class="px-6 py-4 text-center font-medium"><?= $no++ ?></td>
 
                         <td class="px-6 py-4 nama-nisn-cell">
                             <div class="font-bold text-slate-800"><?= esc($s['nama_lengkap']) ?></div>
-                            <div class="text-[11px] font-mono text-blue-600"><?= esc($s['nisn']) ?></div>
+                            <div class="text-[11px] font-mono text-blue-600">
+                                <?= esc($s['nisn']) ?> <span class="text-slate-400 mx-1">&bull;</span> <strong class="text-purple-600"><?= esc($s['tingkat'] . ' ' . $s['jurusan']) ?></strong>
+                            </div>
                         </td>
 
                         <td class="px-6 py-4 text-center border-x border-slate-100 bg-indigo-50/20">
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" onchange="toggleHadir(<?= $jadwal['id'] ?>, <?= $s['id'] ?>, this)" class="sr-only peer" <?= (isset($s['is_hadir']) && $s['is_hadir'] == 1) ? 'checked' : '' ?>>
+                                <input type="checkbox" onchange="toggleHadir(<?= $idJadwalKirim ?>, <?= $s['id'] ?>, this)" class="sr-only peer" <?= (isset($s['is_hadir']) && $s['is_hadir'] == 1) ? 'checked' : '' ?>>
                                 <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                             </label>
                             <span class="block text-[10px] font-bold mt-1 label-hadir-<?= $s['id'] ?> <?= (isset($s['is_hadir']) && $s['is_hadir'] == 1) ? 'text-emerald-600' : 'text-slate-400' ?>">
@@ -134,7 +139,7 @@
                                 </form>
 
                                 <?php if ($s['status_ujian'] == 'progress'): ?>
-                                    <form action="/panel/ruang-pengawas/force-selesai/<?= $jadwal['id'] ?>/<?= $s['id'] ?>" method="POST" class="inline-block">
+                                    <form action="/panel/ruang-pengawas/force-selesai/<?= $idJadwalKirim ?>/<?= $s['id'] ?>" method="POST" class="inline-block">
                                         <?= csrf_field() ?>
                                         <button type="submit" onclick="return confirm('Yakin ingin memaksa siswa ini selesai?')" class="px-3 py-1 text-xs font-bold rounded bg-slate-800 hover:bg-slate-900 text-white transition">
                                             ⏹️ Paksa
@@ -162,12 +167,8 @@
 
 <?= $this->section('scripts') ?>
 <script>
-    // ==========================================
-    // ENGINE JAVASCRIPT GLOBAL
-    // ==========================================
     let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-    // 1. ENGINE ABSENSI AJAX
     function toggleHadir(jadwalId, siswaId, el) {
         let formData = new window.FormData();
         formData.append('<?= csrf_token() ?>', csrfToken);
@@ -182,7 +183,7 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    csrfToken = data.csrfHash; // Sinkronisasi CSRF
+                    csrfToken = data.csrfHash;
                     document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfToken);
 
                     let label = document.querySelector('.label-hadir-' + siswaId);
@@ -203,7 +204,6 @@
             });
     }
 
-    // 2. ENGINE AUTO-GENERATE TOKEN TUNGGAL (15 MENIT)
     let tokenCountdown = <?= $sisa_waktu ?? 900 ?>;
     let timerTokenInterval;
 
@@ -230,7 +230,7 @@
 
         document.getElementById('displayTokenBesar').innerText = "⏳...";
 
-        fetch(`/panel/ruang-pengawas/generate-token-ajax/<?= $jadwal['id'] ?>`, {
+        fetch(`/panel/ruang-pengawas/generate-token-ajax/<?= $jadwal['id_gabungan'] ?>`, {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -247,7 +247,7 @@
                     tokenCountdown = 900;
                     startTokenTimer();
 
-                    let msg = mode === 'auto' ? 'Token diperbarui otomatis!' : 'Token berhasil dirilis!';
+                    let msg = mode === 'auto' ? 'Token diperbarui otomatis!' : 'Token berhasil dirilis ke semua kelas!';
                     Swal.fire({
                         toast: true,
                         position: 'top-end',
@@ -276,7 +276,6 @@
         });
     }
 
-    // 3. ENGINE PENCARIAN SISWA (REAL-TIME CLIENT SIDE)
     document.getElementById('cariSiswa').addEventListener('input', function(e) {
         let keyword = e.target.value.toLowerCase();
         let rows = document.querySelectorAll('.row-siswa');
@@ -284,14 +283,13 @@
         rows.forEach(row => {
             let textData = row.querySelector('.nama-nisn-cell').textContent.toLowerCase();
             if (textData.includes(keyword)) {
-                row.style.display = ''; // Munculkan baris
+                row.style.display = '';
             } else {
-                row.style.display = 'none'; // Sembunyikan baris
+                row.style.display = 'none';
             }
         });
     });
 
-    // Eksekusi Timer saat halaman pertama kali dimuat
     window.onload = () => {
         if ('<?= $token ?>' !== 'BELUM ADA') {
             if (tokenCountdown <= 0) requestNewToken('auto');

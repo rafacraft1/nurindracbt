@@ -37,28 +37,54 @@ class UjianController extends BaseController
             ->set(['status' => 'finished'])
             ->update();
 
-        $riwayat = $this->hasilUjianModel->where('siswa_id', $siswa['id'])->findAll();
+        // Ambil riwayat dengan join tabel jadwal agar tahu mapel_id nya
+        $db = \Config\Database::connect();
+        $riwayat = $db->table('hasil_ujian')
+            ->select('hasil_ujian.*, jadwal_ujian.mapel_id')
+            ->join('jadwal_ujian', 'jadwal_ujian.id = hasil_ujian.jadwal_id', 'left')
+            ->where('hasil_ujian.siswa_id', $siswa['id'])
+            ->get()->getResultArray();
 
-        $statusUjian    = [];
-        $kehadiran      = [];
-        $jadwalProgress = [];
+        $statusUjian       = [];
+        $kehadiran         = [];
+        $jadwalProgress    = [];
+        $mapelSelesai      = [];
+        $jadwalPreInserted = [];
 
         foreach ($riwayat as $r) {
             $statusUjian[$r['jadwal_id']] = $r['status'];
             $kehadiran[$r['jadwal_id']]   = $r['is_hadir'];
+            $jadwalPreInserted[]          = $r['jadwal_id']; // Didaftarkan khusus (Susulan)
+
             if ($r['status'] === 'progress') {
                 $jadwalProgress[] = $r['jadwal_id'];
+            }
+            if ($r['status'] === 'completed') {
+                $mapelSelesai[] = $r['mapel_id']; // Mapel yang sudah tuntas
             }
         }
 
         $builder = $this->jadwalModel->select('jadwal_ujian.*, master_mapel.nama_mapel, master_jenis_ujian.nama_ujian')
             ->join('master_mapel', 'master_mapel.id = jadwal_ujian.mapel_id')
             ->join('master_jenis_ujian', 'master_jenis_ujian.id = jadwal_ujian.jenis_ujian_id')
-            ->where('jadwal_ujian.ruangan_id', $siswa['ruangan_id'])
             ->where('jadwal_ujian.tingkat', $siswa['tingkat'])
-            ->where('jadwal_ujian.jurusan', $siswa['jurusan'])
             ->where('jadwal_ujian.tahun_ajaran', $this->tahunAktif)
             ->where('jadwal_ujian.semester', $this->smtAktif);
+
+        // Modifikasi Akses Ruangan: 
+        // Buka akses khusus bagi siswa target yang dipindah ke ruangan gabungan (Lab)
+        if (!empty($jadwalPreInserted)) {
+            $builder->groupStart()
+                ->groupStart()
+                ->where('jadwal_ujian.ruangan_id', $siswa['ruangan_id'])
+                ->where('jadwal_ujian.jurusan', $siswa['jurusan'])
+                ->groupEnd()
+                ->orWhereIn('jadwal_ujian.id', $jadwalPreInserted)
+                ->groupEnd();
+        } else {
+            $builder->where('jadwal_ujian.ruangan_id', $siswa['ruangan_id'])
+                ->where('jadwal_ujian.jurusan', $siswa['jurusan']);
+        }
 
         if (!empty($jadwalProgress)) {
             $builder->groupStart()
@@ -69,9 +95,35 @@ class UjianController extends BaseController
             $builder->whereIn('jadwal_ujian.status', ['ready', 'active']);
         }
 
+        $rawJadwal = $builder->orderBy('jadwal_ujian.waktu_mulai', 'ASC')->findAll();
+
+        // FILTER CERDAS: Buang jadwal yang tidak berhak dilihat siswa
+        $jadwalAktif = [];
+        foreach ($rawJadwal as $j) {
+            $isPreInserted = in_array($j['id'], $jadwalPreInserted);
+
+            // 1. Jika jadwal ini didaftarkan khusus (Susulan), wajib tampilkan ke target
+            if ($isPreInserted) {
+                $jadwalAktif[] = $j;
+                continue;
+            }
+
+            // 2. Jika siswa sudah menyelesaikan reguler, sembunyikan ujian susulan yg bocor
+            if (in_array($j['mapel_id'], $mapelSelesai)) {
+                continue;
+            }
+
+            // 3. Jika nama ujian eksplisit 'Susulan' tapi siswa ini bukan target, blokir total
+            if (stripos($j['nama_ujian'], 'susulan') !== false) {
+                continue;
+            }
+
+            $jadwalAktif[] = $j;
+        }
+
         $data = [
             'title'       => 'Lobi Ujian - CBT PRO',
-            'jadwalAktif' => $builder->orderBy('jadwal_ujian.waktu_mulai', 'ASC')->findAll(),
+            'jadwalAktif' => $jadwalAktif,
             'statusUjian' => $statusUjian,
             'kehadiran'   => $kehadiran
         ];
@@ -91,7 +143,6 @@ class UjianController extends BaseController
             return redirect()->back()->with('error', 'Akses Ditolak! Jadwal ujian ini sudah ditutup.');
         }
 
-        // Delegasi pengecekan ke Service
         if (!$this->ujianService->validateToken($jadwalId, $tokenInput)) {
             return redirect()->back()->with('error', 'Token salah atau belum dirilis Pengawas!');
         }
@@ -183,7 +234,6 @@ class UjianController extends BaseController
 
         $hasil = $this->hasilUjianModel->getHasilByJadwalSiswa($jadwalId, $siswaId);
 
-        // TRANSAKSI DATABASE DIMULAI (Keamanan absolut)
         $db = \Config\Database::connect();
         $db->transStart();
 
@@ -197,7 +247,6 @@ class UjianController extends BaseController
         $this->siswaModel->update($siswaId, ['is_login' => 0]);
 
         $db->transComplete();
-        // TRANSAKSI SELESAI
 
         if ($db->transStatus() === false) {
             return redirect()->to('/ujian')->with('error', 'Terjadi kesalahan sistem saat menyimpan nilai. Segera lapor pengawas!');

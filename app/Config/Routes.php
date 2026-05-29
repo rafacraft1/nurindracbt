@@ -63,6 +63,7 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
         $routes->post('jadwal/delete/(:num)', 'JadwalController::delete/$1');
         $routes->post('jadwal/plot-pengawas', 'JadwalController::plotPengawas');
         $routes->post('jadwal/generate-json/(:num)', 'JadwalController::generateJson/$1');
+        $routes->post('jadwal/susulan', 'JadwalController::createSusulan');
 
         $routes->get('jenis-ujian', 'JenisUjianController::index');
         $routes->post('jenis-ujian/store', 'JenisUjianController::store');
@@ -100,5 +101,6 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
         $routes->get('export/(:num)', 'PenilaianController::exportExcel/$1');
         $routes->get('koreksi/(:num)/(:num)', 'PenilaianController::koreksi/$1/$2');
         $routes->post('simpan-koreksi', 'PenilaianController::simpanKoreksi');
+        $routes->post('susulan-gabungan', 'PenilaianController::createSusulanGabungan');
     });
 });

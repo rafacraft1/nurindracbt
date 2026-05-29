@@ -12,6 +12,8 @@
  * @var array $mapel
  * @var array $ruangan
  * @var array $semua_guru
+ * @var array $listTingkat
+ * @var array $listJurusan
  */
 ?>
 <?= $this->extend('layouts/panel') ?>
@@ -259,11 +261,21 @@
                 <div class="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded border border-slate-200">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-600 mb-1 uppercase">Tingkat</label>
-                        <input type="text" name="tingkat" placeholder="Misal: XII" required class="w-full px-3 py-1.5 border rounded text-sm uppercase focus:ring-2 focus:ring-blue-500">
+                        <input list="dataTingkat" type="text" name="tingkat" placeholder="Pilih / Ketik..." required autocomplete="off" class="w-full px-3 py-1.5 border rounded text-sm uppercase focus:ring-2 focus:ring-blue-500 bg-white">
+                        <datalist id="dataTingkat">
+                            <?php foreach ($listTingkat as $t): ?>
+                                <option value="<?= esc($t['tingkat']) ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-600 mb-1 uppercase">Jurusan</label>
-                        <input type="text" name="jurusan" placeholder="Misal: RPL" class="w-full px-3 py-1.5 border rounded text-sm uppercase focus:ring-2 focus:ring-blue-500">
+                        <input list="dataJurusan" type="text" name="jurusan" placeholder="Pilih / Ketik..." autocomplete="off" class="w-full px-3 py-1.5 border rounded text-sm uppercase focus:ring-2 focus:ring-blue-500 bg-white">
+                        <datalist id="dataJurusan">
+                            <?php foreach ($listJurusan as $j): ?>
+                                <option value="<?= esc($j['jurusan']) ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-600 mb-1 uppercase">Ruangan Ujian</label>
@@ -337,11 +349,21 @@
                 <div class="grid grid-cols-3 gap-3 bg-amber-50/30 p-3 rounded border border-amber-100">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-600 mb-1 uppercase">Tingkat</label>
-                        <input type="text" name="tingkat" id="edit_tingkat" required class="w-full px-3 py-1.5 border rounded text-sm uppercase focus:ring-2 focus:ring-amber-500">
+                        <input list="dataTingkatEdit" type="text" name="tingkat" id="edit_tingkat" placeholder="Pilih / Ketik..." required autocomplete="off" class="w-full px-3 py-1.5 border rounded text-sm uppercase focus:ring-2 focus:ring-amber-500 bg-white">
+                        <datalist id="dataTingkatEdit">
+                            <?php foreach ($listTingkat as $t): ?>
+                                <option value="<?= esc($t['tingkat']) ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-600 mb-1 uppercase">Jurusan</label>
-                        <input type="text" name="jurusan" id="edit_jurusan" class="w-full px-3 py-1.5 border rounded text-sm uppercase focus:ring-2 focus:ring-amber-500">
+                        <input list="dataJurusanEdit" type="text" name="jurusan" id="edit_jurusan" placeholder="Pilih / Ketik..." autocomplete="off" class="w-full px-3 py-1.5 border rounded text-sm uppercase focus:ring-2 focus:ring-amber-500 bg-white">
+                        <datalist id="dataJurusanEdit">
+                            <?php foreach ($listJurusan as $j): ?>
+                                <option value="<?= esc($j['jurusan']) ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-600 mb-1 uppercase">Ruangan</label>

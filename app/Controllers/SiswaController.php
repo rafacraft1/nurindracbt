@@ -13,7 +13,6 @@ class SiswaController extends BaseController
 
     public function __construct()
     {
-        // Inisialisasi Model dan Service
         $this->siswaModel   = new SiswaModel();
         $this->excelService = new ExcelService();
     }
@@ -35,7 +34,6 @@ class SiswaController extends BaseController
         $totalPages = (int)ceil($totalData / $perPage);
         $siswa      = $this->siswaModel->getPaginatedSiswa($search, $sortCol, $sortDir, $perPage, $offset);
 
-        // Nanti di fase selanjutnya kita buatkan RuanganModel, sementara pakai Builder
         $db = \Config\Database::connect();
         $ruangan = $db->table('ruangan')->get()->getResultArray();
 
@@ -129,6 +127,9 @@ class SiswaController extends BaseController
     {
         $step = (string)($this->request->getPost('step') ?? 'init');
 
+        // ==============================================================================
+        // TAHAP 1: INIT - Konversi ke JSONL (Baris per Baris)
+        // ==============================================================================
         if ($step === 'init') {
             $file = $this->request->getFile('file_excel');
 
@@ -141,7 +142,6 @@ class SiswaController extends BaseController
             }
 
             try {
-                // Mendelegasikan tugas berat ke Service
                 $cleanRows = $this->excelService->parseSiswaExcel($file);
 
                 if (empty($cleanRows)) {
@@ -149,7 +149,12 @@ class SiswaController extends BaseController
                 }
 
                 $tempId = uniqid('import_');
-                file_put_contents(WRITEPATH . 'uploads/' . $tempId . '.json', json_encode($cleanRows));
+                $filePath = WRITEPATH . 'uploads/' . $tempId . '.jsonl';
+                $handle = fopen($filePath, 'w');
+                foreach ($cleanRows as $row) {
+                    fwrite($handle, json_encode($row) . PHP_EOL);
+                }
+                fclose($handle);
 
                 return $this->response->setJSON([
                     'status'  => 'success',
@@ -162,45 +167,67 @@ class SiswaController extends BaseController
             }
         }
 
+        // ==============================================================================
+        // TAHAP 2: PROCESS - Streaming Data, Password Cache & Bulk Insert
+        // ==============================================================================
         if ($step === 'process') {
             set_time_limit(0);
-            ini_set('memory_limit', '512M');
 
             $tempId = (string)$this->request->getPost('temp_id');
             $offset = (int)$this->request->getPost('offset');
             $limit  = (int)$this->request->getPost('limit');
 
-            $filePath = WRITEPATH . 'uploads/' . $tempId . '.json';
+            $filePath = WRITEPATH . 'uploads/' . $tempId . '.jsonl';
             if (!file_exists($filePath)) {
                 return $this->response->setJSON(['status' => 'error', 'message' => 'File temporary tidak ditemukan. Muat ulang halaman.', 'csrf' => csrf_hash()]);
             }
 
-            $rows = json_decode((string)file_get_contents($filePath), true);
-            $chunk = array_slice($rows, $offset, $limit);
+            // OPTIMASI: Membaca file hanya pada baris yang dibutuhkan (Seek)
+            $file = new \SplFileObject($filePath);
+            $file->seek($offset);
 
-            $dataInsert   = [];
-            $jumlahSukses = 0;
-            $jumlahGagal  = 0;
-
-            // Mengambil semua NISN existing untuk validasi anti-duplikat
-            $existingDb = $this->siswaModel->select('nisn')->findAll();
-            $existingMap = [];
-            foreach ($existingDb as $rowDb) {
-                $existingMap[$rowDb['nisn']] = true;
+            $chunk = [];
+            for ($i = 0; $i < $limit; $i++) {
+                if ($file->eof()) break;
+                $line = $file->current();
+                if (!empty(trim($line))) {
+                    $chunk[] = json_decode($line, true);
+                }
+                $file->next();
             }
 
-            $passwordCache = ['siswa123' => password_hash('siswa123', PASSWORD_DEFAULT)];
+            // Filter Anti-Duplikat (Hanya melacak NISN di chunk ini)
+            $nisnList = [];
+            foreach ($chunk as $row) {
+                $nisnVal = trim((string)($row[0] ?? ''));
+                if (!empty($nisnVal)) $nisnList[] = $nisnVal;
+            }
+
+            $existingMap = [];
+            if (!empty($nisnList)) {
+                $existingDb = $this->siswaModel->select('nisn')->whereIn('nisn', $nisnList)->findAll();
+                foreach ($existingDb as $rowDb) {
+                    $existingMap[$rowDb['nisn']] = true;
+                }
+            }
+
+            $dataInsert    = [];
+            $jumlahSukses  = 0;
+            $jumlahGagal   = 0;
+            $passwordCache = [];
 
             foreach ($chunk as $row) {
                 $nisn = trim((string)($row[0] ?? ''));
                 $nama = trim((string)($row[1] ?? ''));
 
-                if (isset($existingMap[$nisn])) {
+                if (empty($nisn) || isset($existingMap[$nisn])) {
                     $jumlahGagal++;
                     continue;
                 }
 
                 $passwordPlain = trim((string)($row[5] ?? '')) ?: 'siswa123';
+
+                // OPTIMASI: Caching Hash memori sementara
                 if (!isset($passwordCache[$passwordPlain])) {
                     $passwordCache[$passwordPlain] = password_hash($passwordPlain, PASSWORD_DEFAULT);
                 }
@@ -225,6 +252,9 @@ class SiswaController extends BaseController
                 $this->siswaModel->insertBatch($dataInsert);
             }
 
+            // Garbage collection manual
+            unset($chunk, $dataInsert, $existingMap, $passwordCache, $file);
+
             return $this->response->setJSON([
                 'status' => 'success',
                 'sukses' => $jumlahSukses,
@@ -233,9 +263,12 @@ class SiswaController extends BaseController
             ]);
         }
 
+        // ==============================================================================
+        // TAHAP 3: FINISH - Membersihkan File
+        // ==============================================================================
         if ($step === 'finish') {
             $tempId = (string)$this->request->getPost('temp_id');
-            $filePath = WRITEPATH . 'uploads/' . $tempId . '.json';
+            $filePath = WRITEPATH . 'uploads/' . $tempId . '.jsonl';
             if (file_exists($filePath)) unlink($filePath);
 
             return $this->response->setJSON(['status' => 'success', 'csrf' => csrf_hash()]);
@@ -243,6 +276,7 @@ class SiswaController extends BaseController
 
         return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid Step', 'csrf' => csrf_hash()]);
     }
+
     public function cetakKartu(): string
     {
         $db = \Config\Database::connect();

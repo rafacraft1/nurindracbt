@@ -63,6 +63,10 @@ class JadwalController extends BaseController
         $jenisUjianModel = new JenisUjianModel();
         $ruanganModel    = new RuanganModel();
 
+        // Mengambil data unik dari tabel siswa untuk kebutuhan sugesti datalist dropdown
+        $listTingkat = $db->table('siswa')->select('tingkat')->where('tingkat !=', '')->distinct()->orderBy('tingkat', 'ASC')->get()->getResultArray();
+        $listJurusan = $db->table('siswa')->select('jurusan')->where('jurusan !=', '')->where('jurusan IS NOT NULL')->distinct()->orderBy('jurusan', 'ASC')->get()->getResultArray();
+
         $data = [
             'title'       => 'Manajemen Jadwal - CBT PRO',
             'jadwal'      => $jadwal,
@@ -70,6 +74,8 @@ class JadwalController extends BaseController
             'mapel'       => $mapel,
             'ruangan'     => $ruanganModel->findAll(),
             'semua_guru'  => $db->table('staff')->where('role', 'guru')->orderBy('nama_lengkap', 'ASC')->get()->getResultArray(),
+            'listTingkat' => $listTingkat,
+            'listJurusan' => $listJurusan,
             'currentPage' => $page,
             'totalPages'  => $totalPages,
             'totalData'   => $totalData,
@@ -83,20 +89,53 @@ class JadwalController extends BaseController
 
     public function store(): ResponseInterface
     {
+        $waktuMulai   = $this->request->getPost('waktu_mulai');
+        $waktuSelesai = $this->request->getPost('waktu_selesai');
+        $ruanganId    = $this->request->getPost('ruangan_id');
+        $tingkat      = strtoupper((string)$this->request->getPost('tingkat'));
+        $jurusan      = strtoupper((string)$this->request->getPost('jurusan'));
+
+        if (strtotime((string)$waktuSelesai) <= strtotime((string)$waktuMulai)) {
+            return redirect()->back()->with('error', 'Gagal! Waktu selesai tidak boleh lebih awal atau sama dengan waktu mulai.');
+        }
+
+        // VALIDASI KEAMANAN: Mencegah bentrok pemakaian ruangan atau bentrok jadwal dalam satu kelas
+        $bentrok = $this->jadwalModel
+            ->groupStart()
+            ->where('ruangan_id', $ruanganId)
+            ->orGroupStart()
+            ->where('tingkat', $tingkat)
+            ->where('jurusan', $jurusan)
+            ->groupEnd()
+            ->groupEnd()
+            ->where('waktu_mulai <', $waktuSelesai)
+            ->where('waktu_selesai >', $waktuMulai)
+            ->where('tahun_ajaran', $this->tahunAktif)
+            ->where('semester', $this->smtAktif)
+            ->first();
+
+        if ($bentrok) {
+            $pesanBentrok = ($bentrok['ruangan_id'] == $ruanganId)
+                ? 'Ruangan sudah terpakai oleh jadwal ujian lain pada rentang jam tersebut!'
+                : "Kelas $tingkat $jurusan sudah memiliki agenda ujian lain pada jam tersebut!";
+            return redirect()->back()->with('error', 'BENTROK: ' . $pesanBentrok);
+        }
+
         $this->jadwalModel->insert([
             'jenis_ujian_id' => $this->request->getPost('jenis_ujian_id'),
             'mapel_id'       => $this->request->getPost('mapel_id'),
-            'tingkat'        => strtoupper((string)$this->request->getPost('tingkat')),
-            'jurusan'        => strtoupper((string)$this->request->getPost('jurusan')),
-            'ruangan_id'     => $this->request->getPost('ruangan_id'),
-            'waktu_mulai'    => $this->request->getPost('waktu_mulai'),
-            'waktu_selesai'  => $this->request->getPost('waktu_selesai'),
+            'tingkat'        => $tingkat,
+            'jurusan'        => $jurusan,
+            'ruangan_id'     => $ruanganId,
+            'waktu_mulai'    => $waktuMulai,
+            'waktu_selesai'  => $waktuSelesai,
             'durasi'         => $this->request->getPost('durasi'),
             'status'         => 'draft',
             'pengawas_id'    => null,
             'tahun_ajaran'   => $this->tahunAktif,
             'semester'       => $this->smtAktif
         ]);
+
         return redirect()->back()->with('success', 'Kerangka jadwal berhasil dibuat. Silakan Plot Pengawas.');
     }
 
@@ -104,20 +143,55 @@ class JadwalController extends BaseController
     {
         $jadwal = $this->jadwalModel->find($id);
 
+        $waktuMulai   = $this->request->getPost('waktu_mulai');
+        $waktuSelesai = $this->request->getPost('waktu_selesai');
+        $ruanganId    = $this->request->getPost('ruangan_id');
+        $tingkat      = strtoupper((string)$this->request->getPost('tingkat'));
+        $jurusan      = strtoupper((string)$this->request->getPost('jurusan'));
+
+        if (strtotime((string)$waktuSelesai) <= strtotime((string)$waktuMulai)) {
+            return redirect()->back()->with('error', 'Gagal! Waktu selesai tidak boleh lebih awal atau sama dengan waktu mulai.');
+        }
+
         $dataUpdate = [
-            'jenis_ujian_id' => $this->request->getPost('jenis_ujian_id'),
-            'mapel_id'       => $this->request->getPost('mapel_id'),
-            'tingkat'        => strtoupper((string)$this->request->getPost('tingkat')),
-            'jurusan'        => strtoupper((string)$this->request->getPost('jurusan')),
-            'ruangan_id'     => $this->request->getPost('ruangan_id'),
-            'waktu_mulai'    => $this->request->getPost('waktu_mulai'),
-            'waktu_selesai'  => $this->request->getPost('waktu_selesai'),
+            'waktu_mulai'    => $waktuMulai,
+            'waktu_selesai'  => $waktuSelesai,
             'durasi'         => $this->request->getPost('durasi'),
         ];
 
         if ($jadwal['status'] === 'active') {
-            unset($dataUpdate['jenis_ujian_id'], $dataUpdate['mapel_id'], $dataUpdate['tingkat'], $dataUpdate['jurusan'], $dataUpdate['ruangan_id']);
+            // Ketika status aktif berjalan, hanya durasi/waktu yang boleh diperpanjang
+            $dataUpdate['jenis_ujian_id'] = $jadwal['jenis_ujian_id'];
+            $dataUpdate['mapel_id']       = $jadwal['mapel_id'];
+            $dataUpdate['tingkat']        = $jadwal['tingkat'];
+            $dataUpdate['jurusan']        = $jadwal['jurusan'];
+            $dataUpdate['ruangan_id']     = $jadwal['ruangan_id'];
         } else {
+            $bentrok = $this->jadwalModel
+                ->where('id !=', $id)
+                ->groupStart()
+                ->where('ruangan_id', $ruanganId)
+                ->orGroupStart()
+                ->where('tingkat', $tingkat)
+                ->where('jurusan', $jurusan)
+                ->groupEnd()
+                ->groupEnd()
+                ->where('waktu_mulai <', $waktuSelesai)
+                ->where('waktu_selesai >', $waktuMulai)
+                ->where('tahun_ajaran', $this->tahunAktif)
+                ->where('semester', $this->smtAktif)
+                ->first();
+
+            if ($bentrok) {
+                return redirect()->back()->with('error', 'Update Gagal! Terjadi bentrok Ruangan atau Kelas dengan jadwal lain.');
+            }
+
+            $dataUpdate['jenis_ujian_id'] = $this->request->getPost('jenis_ujian_id');
+            $dataUpdate['mapel_id']       = $this->request->getPost('mapel_id');
+            $dataUpdate['tingkat']        = $tingkat;
+            $dataUpdate['jurusan']        = $jurusan;
+            $dataUpdate['ruangan_id']     = $ruanganId;
+
             if ($jadwal['mapel_id'] != $dataUpdate['mapel_id']) {
                 $dataUpdate['status'] = 'draft';
             } else if ($jadwal['status'] === 'finished' && strtotime((string)$dataUpdate['waktu_selesai']) > time()) {
@@ -127,7 +201,7 @@ class JadwalController extends BaseController
 
         $this->jadwalModel->update($id, $dataUpdate);
         $pesan = $jadwal['status'] === 'active'
-            ? 'Waktu ujian berhasil diperpanjang! (Data mapel/ruangan diabaikan karena sedang berlangsung)'
+            ? 'Waktu ujian berhasil diperpanjang! (Data komponen utama di kunci karena sedang berlangsung)'
             : 'Jadwal ujian berhasil diperbarui!';
 
         return redirect()->back()->with('success', $pesan);
@@ -137,14 +211,19 @@ class JadwalController extends BaseController
     {
         $jadwal = $this->jadwalModel->find($id);
         if ($jadwal['status'] === 'active') {
-            return redirect()->back()->with('error', 'Akses Ditolak! Ujian sedang berlangsung, jadwal tidak boleh dihapus.');
+            return redirect()->back()->with('error', 'Akses Ditolak! Ujian sedang berjalan, jadwal tidak boleh dihapus.');
         }
 
+        // Penghapusan Berkas JSON Soal
         $jsonPath = FCPATH . 'data_soal/jadwal_' . $id . '.json';
         if (file_exists($jsonPath)) unlink($jsonPath);
 
+        // GARBAGE COLLECTOR: Menghapus file token pengawas agar tidak menumpuk memenuhi storage server
+        $tokenPath = FCPATH . 'data_soal/token_' . $id . '.json';
+        if (file_exists($tokenPath)) unlink($tokenPath);
+
         $this->jadwalModel->delete($id);
-        return redirect()->back()->with('success', 'Jadwal dan file soal statis berhasil dihapus.');
+        return redirect()->back()->with('success', 'Jadwal, berkas engine JSON, dan token pengawas berhasil dibersihkan dari server.');
     }
 
     public function plotPengawas(): ResponseInterface
@@ -168,7 +247,7 @@ class JadwalController extends BaseController
             $endLain   = $startLain + ($jl['durasi'] * 60);
 
             if ($startTarget < $endLain && $endTarget > $startLain) {
-                return redirect()->back()->with('error', 'BENTROK! Guru yang dipilih sudah mengawas di ruangan/jadwal lain pada jam tersebut.');
+                return redirect()->back()->with('error', 'BENTROK! Guru tersebut sudah terjadwal mengawas di ruangan lain pada jam kerja ini.');
             }
         }
 
