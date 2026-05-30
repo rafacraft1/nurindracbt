@@ -197,6 +197,35 @@ class UjianController extends BaseController
         return view('ujian/kerjakan', $data);
     }
 
+    public function simpanJawabanAjax(): ResponseInterface
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Akses ilegal']);
+        }
+
+        $jadwalId     = (string)$this->request->getPost('jadwal_id');
+        $jawabanSiswa = (string)$this->request->getPost('jawaban');
+        $siswaId      = (string)session()->get('id');
+
+        $hasil = $this->hasilUjianModel->getHasilByJadwalSiswa($jadwalId, $siswaId);
+
+        if ($hasil && $hasil['status'] === 'progress') {
+            $this->hasilUjianModel->update($hasil['id'], [
+                'jawaban_peserta' => $jawabanSiswa
+            ]);
+
+            return $this->response->setJSON([
+                'status'  => 'success',
+                'message' => 'Autosave berhasil'
+            ]);
+        }
+
+        return $this->response->setStatusCode(400)->setJSON([
+            'status'  => 'error',
+            'message' => 'Sesi ujian tidak valid atau sudah selesai'
+        ]);
+    }
+
     public function submit(): ResponseInterface
     {
         $payloadJson = (string)$this->request->getPost('payload_jawaban');

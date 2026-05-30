@@ -10,7 +10,6 @@ $db = \Config\Database::connect();
 $pengaturan = $db->table('pengaturan')->where('id', 1)->get()->getRowArray();
 $logo = $pengaturan['logo'] ?? null;
 
-// Logika Fallback Logo: Gunakan logo dari database jika ada, jika tidak arahkan ke folder assets/img/logo.png
 $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png');
 ?>
 <!DOCTYPE html>
@@ -25,7 +24,7 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
     <link rel="icon" type="image/png" href="<?= $urlLogo ?>">
 
     <link href="<?= base_url('css/app.css') ?>" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <link rel="stylesheet" type="text/css" href="<?= base_url('css/toastify.min.css') ?>">
 </head>
 
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col select-none">
@@ -129,21 +128,20 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         <input type="hidden" name="payload_jawaban" id="payloadJawaban">
     </form>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="<?= base_url('js/sweetalert2.min.js') ?>"></script>
+    <script src="<?= base_url('js/toastify.min.js') ?>"></script>
 
     <script>
         const JADWAL_ID = <?= $jadwal['id'] ?? 0 ?>;
         const SISWA_ID = <?= session()->get('id') ?? 0 ?>;
         const DURASI = <?= $jadwal['durasi'] ?? 90 ?>;
         const JSON_URL = "<?= base_url('data_soal/jadwal_' . ($jadwal['id'] ?? 0) . '.json') ?>";
+        const JAWABAN_SERVER = <?= empty($hasil['jawaban_peserta']) ? 'null' : $hasil['jawaban_peserta'] ?>;
 
-        // ENGINE WAKTU ABSOLUT
         const WAKTU_SELESAI_MS = <?= strtotime($jadwal['waktu_selesai']) * 1000 ?>;
-        const GRACE_PERIOD_MS = 15 * 60 * 1000; // Toleransi 15 Menit
+        const GRACE_PERIOD_MS = 15 * 60 * 1000;
         const ABSOLUTE_DEADLINE = WAKTU_SELESAI_MS + GRACE_PERIOD_MS;
 
-        // Keamanan Dasar
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.onkeydown = function(e) {
             if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) {
@@ -155,11 +153,11 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
             document.getElementById('kontenSoal').innerHTML = `<p class="text-red-600 font-bold text-center">Gagal merender soal. Terjadi kesalahan sistem: ${msg}</p>`;
         };
 
-        // State Management
         let bankSoal = [];
         let indexAktif = 0;
         let jawabanSiswa = {};
         let intervalWaktu;
+        let timeoutAutoSave;
 
         const STORAGE_KEY = `CBT_ANS_${JADWAL_ID}_${SISWA_ID}`;
         const TIME_KEY = `CBT_TIME_${JADWAL_ID}_${SISWA_ID}`;
@@ -175,6 +173,9 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 if (savedData) {
                     jawabanSiswa = JSON.parse(savedData);
+                } else if (JAWABAN_SERVER) {
+                    jawabanSiswa = JAWABAN_SERVER;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(jawabanSiswa));
                 } else {
                     bankSoal.forEach(s => {
                         jawabanSiswa[s.id] = {
@@ -182,7 +183,7 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                             ragu: false
                         };
                     });
-                    simpanState();
+                    simpanState(); // Trigger simpan awal
                 }
 
                 initTimer();
@@ -313,7 +314,34 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         }
 
         function simpanState() {
+            // Buffer utama ke LocalStorage agar UI super reponsif
             localStorage.setItem(STORAGE_KEY, JSON.stringify(jawabanSiswa));
+
+            // Sync Database (Debounce 1.5s)
+            clearTimeout(timeoutAutoSave);
+            timeoutAutoSave = setTimeout(() => {
+                sinkronisasiKeServer();
+            }, 1500);
+        }
+
+        async function sinkronisasiKeServer() {
+            try {
+                const formData = new window.FormData();
+                formData.append('jadwal_id', JADWAL_ID);
+                formData.append('jawaban', JSON.stringify(jawabanSiswa));
+
+                // Pastikan token CSRF (Jika diaktifkan Global) terinjeksi lewat logic front.php
+                const response = await fetch('/ujian/simpan-jawaban-ajax', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    console.warn("Autosave API mengembalikan status error.");
+                }
+            } catch (error) {
+                console.error("Gagal sinkronisasi jawaban ke server. Jatuh kembali ke Offline Mode (LocalStorage)", error);
+            }
         }
 
         function initTimer() {
@@ -323,7 +351,6 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
             if (!endTime) {
                 endTime = nowInit + (DURASI * 60 * 1000);
 
-                // MENCEKIK TIMER JIKA MELEBIHI BATAS TOLERANSI
                 if (endTime > ABSOLUTE_DEADLINE) {
                     endTime = ABSOLUTE_DEADLINE;
                     Toastify({
@@ -337,7 +364,6 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                 }
                 localStorage.setItem(TIME_KEY, endTime);
             } else {
-                // Re-validasi jika siswa iseng mengubah memori browser
                 if (endTime > ABSOLUTE_DEADLINE) {
                     endTime = ABSOLUTE_DEADLINE;
                     localStorage.setItem(TIME_KEY, endTime);

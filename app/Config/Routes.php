@@ -15,6 +15,7 @@ $routes->group('', ['filter' => 'auth:siswa'], static function ($routes) {
     $routes->get('ujian', 'UjianController::index');
     $routes->post('ujian/mulai', 'UjianController::mulai');
     $routes->get('ujian/kerjakan/(:num)', 'UjianController::kerjakan/$1');
+    $routes->post('ujian/simpan-jawaban-ajax', 'UjianController::simpanJawabanAjax'); // Endpoint Autosave
     $routes->post('ujian/submit', 'UjianController::submit');
 });
 
@@ -88,7 +89,6 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
     $routes->group('ruang-pengawas', static function ($routes) {
         $routes->get('/', 'PengawasController::index');
         $routes->get('monitor/(:num)', 'PengawasController::monitor/$1');
-        # $routes->post('generate-token/(:num)', 'PengawasController::generateToken/$1');
         $routes->post('generate-token-ajax/(:num)', 'PengawasController::generateTokenAjax/$1');
         $routes->post('reset-login/(:num)', 'PengawasController::resetLogin/$1');
         $routes->post('force-selesai/(:num)/(:num)', 'PengawasController::forceSelesai/$1/$2');
