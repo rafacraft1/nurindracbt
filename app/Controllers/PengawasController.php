@@ -40,7 +40,6 @@ class PengawasController extends BaseController
 
         $rawJadwal = $builder->orderBy('waktu_mulai', 'DESC')->findAll();
 
-        // LOGIKA VIRTUAL GROUPING: Menyatukan jadwal serumpun lintas jurusan ke 1 layar pengawas
         $groupedJadwal = [];
         foreach ($rawJadwal as $j) {
             $key = $j['mapel_id'] . '_' . $j['ruangan_id'] . '_' . strtotime((string)$j['waktu_mulai']) . '_' . $j['pengawas_id'];
@@ -83,7 +82,6 @@ class PengawasController extends BaseController
 
         if (!$jadwal) return redirect()->to('/panel/ruang-pengawas')->with('error', 'Jadwal tidak ditemukan.');
 
-        // VALIDASI HAK AKSES PENGAWAS
         if (!$this->verifyPengawasAccess($firstId)) {
             return redirect()->to('/panel/ruang-pengawas')->with('error', 'Akses Ditolak! Anda bukan pengawas di ruangan ini.');
         }
@@ -91,27 +89,23 @@ class PengawasController extends BaseController
         $jadwals = $this->jadwalModel->whereIn('id', $ids)->findAll();
         $db = \Config\Database::connect();
 
-        // PERBAIKAN: Menggunakan LEFT JOIN agar siswa reguler yang belum mulai ujian tetap tertampil di monitor
         $builder = $db->table('siswa')
             ->select('siswa.id, siswa.nisn, siswa.nama_lengkap, siswa.tingkat, siswa.jurusan, siswa.is_login, hasil_ujian.status as status_ujian, hasil_ujian.is_hadir, hasil_ujian.jadwal_id as actual_jadwal_id')
             ->join('hasil_ujian', "hasil_ujian.siswa_id = siswa.id AND hasil_ujian.jadwal_id IN (" . implode(',', $ids) . ")", 'left');
 
         $builder->groupStart();
         foreach ($jadwals as $jw) {
-            // 1. Filter Reguler: Siswa yang kelas dan ruangannya sesuai dengan pengaturan jadwal
             $builder->orGroupStart()
                 ->where('siswa.tingkat', $jw['tingkat'])
                 ->where('siswa.jurusan', $jw['jurusan'])
                 ->where('siswa.ruangan_id', $jw['ruangan_id'])
                 ->groupEnd();
         }
-        // 2. Filter Susulan: Menjaring siswa susulan yang beda ruangan tapi sudah dipaksa masuk ke jadwal ini via hasil_ujian
         $builder->orWhere("hasil_ujian.jadwal_id IN (" . implode(',', $ids) . ")");
         $builder->groupEnd();
 
         $siswa = $builder->orderBy('siswa.nama_lengkap', 'ASC')->get()->getResultArray();
 
-        // Normalisasi null value jika view membutuhkan kepastian nilai
         foreach ($siswa as &$s) {
             $s['is_hadir'] = (int)($s['is_hadir'] ?? 0);
             $s['status_ujian'] = $s['status_ujian'] ?? 'belum_mulai';
@@ -136,9 +130,28 @@ class PengawasController extends BaseController
         $ids = explode('-', $jadwalIdGabungan);
         $firstId = $ids[0];
 
-        // VALIDASI IDOR (Endpoint AJAX Protection)
         if (!$this->verifyPengawasAccess($firstId)) {
             return $this->response->setJSON(['success' => false, 'message' => 'Akses Ilegal! Anda tidak berhak mengontrol jadwal ini.']);
+        }
+
+        // SECURITY PATCH: TIME-LOCK VALIDATION
+        $jadwalUtama = $this->jadwalModel->find($firstId);
+        $sekarang    = time();
+        $mulai       = strtotime((string)$jadwalUtama['waktu_mulai']);
+        $selesai     = strtotime((string)$jadwalUtama['waktu_selesai']);
+
+        if ($sekarang < $mulai) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'BELUM WAKTUNYA! Token hanya dapat dirilis pada ' . date('d M Y, H:i', $mulai)
+            ]);
+        }
+
+        if ($sekarang > $selesai) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'WAKTU HABIS! Jadwal ujian ini sudah ditutup secara sistem.'
+            ]);
         }
 
         $result = $this->ujianService->generateTokenBaru($firstId);
@@ -147,10 +160,9 @@ class PengawasController extends BaseController
             $tokenFile = FCPATH . 'data_soal/token_' . $firstId . '.json';
             $tokenContent = file_exists($tokenFile) ? file_get_contents($tokenFile) : null;
 
-            // Kloning Token agar seluruh jadwal turunan mengenali token yang sama secara serentak
             foreach ($ids as $id) {
                 $jadwal = $this->jadwalModel->find($id);
-                if ($jadwal['status'] === 'ready') {
+                if ($jadwal['status'] === 'ready' && $sekarang >= $mulai && $sekarang <= $selesai) {
                     $this->jadwalModel->update($id, ['status' => 'active']);
                 }
                 if ($id != $firstId && $tokenContent) {
@@ -165,18 +177,23 @@ class PengawasController extends BaseController
             ]);
         }
 
-        return $this->response->setJSON(['success' => false, 'message' => 'Gagal menulis file token!']);
+        return $this->response->setJSON(['success' => false, 'message' => 'Gagal menulis file token di server!']);
     }
 
     public function resetLogin(string $siswaId): ResponseInterface
     {
+        $jadwalId = (string)$this->request->getPost('jadwal_id');
+
+        if (empty($jadwalId) || !$this->verifyPengawasAccess($jadwalId)) {
+            return redirect()->back()->with('error', 'Akses Ditolak! Anda bukan pengawas untuk sesi siswa ini.');
+        }
+
         $this->siswaModel->update($siswaId, ['is_login' => 0]);
         return redirect()->back()->with('success', 'Sesi login siswa berhasil direset.');
     }
 
     public function forceSelesai(string $jadwalId, string $siswaId): ResponseInterface
     {
-        // VALIDASI IDOR (Aksi Paksa Selesai)
         if (!$this->verifyPengawasAccess($jadwalId)) {
             return redirect()->back()->with('error', 'Akses Ditolak! Anda bukan pengawas untuk sesi ini.');
         }
@@ -190,7 +207,6 @@ class PengawasController extends BaseController
 
     public function tandaiHadir(string $jadwalId, string $siswaId): ResponseInterface
     {
-        // VALIDASI IDOR (Aksi Absensi Fisik)
         if (!$this->verifyPengawasAccess($jadwalId)) {
             return $this->response->setJSON(['success' => false, 'message' => 'Akses Ditolak!']);
         }
@@ -202,7 +218,6 @@ class PengawasController extends BaseController
             $this->hasilUjianModel->update($cek['id'], ['is_hadir' => $newHadir]);
             return $this->response->setJSON(['success' => true, 'is_hadir' => $newHadir, 'csrfHash' => csrf_hash()]);
         } else {
-            // Pembuatan record baru jika siswa reguler pertama kali ditandai hadir
             $this->hasilUjianModel->insert([
                 'jadwal_id' => $jadwalId,
                 'siswa_id'  => $siswaId,
@@ -213,13 +228,13 @@ class PengawasController extends BaseController
         }
     }
 
-    /**
-     * Private Helper untuk proteksi IDOR Pengawas
-     */
     private function verifyPengawasAccess(string $jadwalId): bool
     {
         if (session()->get('role') === 'admin') return true;
-        $jadwal = $this->jadwalModel->find($jadwalId);
-        return $jadwal && $jadwal['pengawas_id'] == session()->get('id');
+
+        $ids = explode('-', $jadwalId);
+        $jadwalUtama = $this->jadwalModel->find($ids[0]);
+
+        return $jadwalUtama && $jadwalUtama['pengawas_id'] == session()->get('id');
     }
 }

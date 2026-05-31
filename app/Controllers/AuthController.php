@@ -27,7 +27,7 @@ class AuthController extends BaseController
         $staffModel = new StaffModel();
         $siswaModel = new SiswaModel();
 
-        // Mengambil properti pengaturan global yang sudah diinisiasi di BaseController (Fase 1)
+        // Mengambil properti pengaturan global yang sudah diinisiasi di BaseController
         $isMaintenance     = (int)($this->pengaturanGlobal['maintenance_mode'] ?? 0);
         $isBlockMultiLogin = (int)($this->pengaturanGlobal['block_multi_login'] ?? 0);
 
@@ -36,8 +36,12 @@ class AuthController extends BaseController
         if ($staff) {
             if (password_verify($password, (string)$staff['password'])) {
                 if ($isMaintenance === 1 && $staff['role'] !== 'admin') {
-                    return redirect()->back()->with('error', 'Sistem sedang dalam pemeliharaan (Maintenance). Akses hanya untuk Administrator.');
+                    // FIX: Gunakan redirect()->to('/login') agar Flashdata tidak hilang saat referer kosong
+                    return redirect()->to('/login')->with('error', 'Sistem sedang dalam pemeliharaan (Maintenance). Akses hanya untuk Administrator.');
                 }
+
+                // FIX: Mencegah Session Fixation & mereset ID sesi untuk keamanan
+                session()->regenerate();
 
                 session()->set([
                     'id'           => $staff['id'],
@@ -50,7 +54,7 @@ class AuthController extends BaseController
                 ]);
                 return redirect()->to('/panel/dashboard')->with('success', 'Selamat datang kembali, ' . $staff['nama_lengkap']);
             }
-            return redirect()->back()->with('error', 'Password Staff salah.');
+            return redirect()->to('/login')->with('error', 'Password Staff salah.');
         }
 
         $siswa = $siswaModel->where('nisn', $username)->first();
@@ -58,17 +62,20 @@ class AuthController extends BaseController
         if ($siswa) {
             if (password_verify($password, (string)$siswa['password'])) {
                 if ($isMaintenance === 1) {
-                    return redirect()->back()->with('error', 'Sistem sedang ditutup sementara oleh Panitia. Silakan tunggu informasi lebih lanjut.');
+                    return redirect()->to('/login')->with('error', 'Sistem sedang ditutup sementara oleh Panitia. Silakan tunggu informasi lebih lanjut.');
                 }
 
                 if ($isBlockMultiLogin === 1 && (int)$siswa['is_login'] === 1) {
-                    return redirect()->back()->with('error', 'Akun sedang aktif di perangkat lain! Lapor Pengawas untuk mereset sesi Anda.');
+                    return redirect()->to('/login')->with('error', 'Akun sedang aktif di perangkat lain! Lapor Pengawas untuk mereset sesi Anda.');
                 }
 
                 $siswaModel->update($siswa['id'], [
                     'is_login'    => 1,
                     'last_active' => date('Y-m-d H:i:s')
                 ]);
+
+                // FIX: Memaksa pembuatan Sesi baru di perangkat yang baru (Penyelamat perangkat mati)
+                session()->regenerate();
 
                 session()->set([
                     'id'           => $siswa['id'],
@@ -77,16 +84,17 @@ class AuthController extends BaseController
                     'tingkat'      => $siswa['tingkat'],
                     'jurusan'      => $siswa['jurusan'],
                     'ruangan_id'   => $siswa['ruangan_id'],
+                    'rombel'       => $siswa['rombel'] ?? '',
                     'user_type'    => 'siswa',
                     'logged_in'    => true
                 ]);
 
                 return redirect()->to('/ujian')->with('success', 'Berhasil login. Selamat mengerjakan ujian.');
             }
-            return redirect()->back()->with('error', 'Password Siswa salah.');
+            return redirect()->to('/login')->with('error', 'Password Siswa salah.');
         }
 
-        return redirect()->back()->with('error', 'Username / NISN tidak terdaftar di sistem.');
+        return redirect()->to('/login')->with('error', 'Username / NISN tidak terdaftar di sistem.');
     }
 
     public function logout(): ResponseInterface

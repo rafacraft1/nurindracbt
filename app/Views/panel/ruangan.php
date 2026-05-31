@@ -34,16 +34,41 @@
             <tbody class="divide-y divide-slate-100">
                 <?php $no = 1;
                 foreach ($ruangan as $r): ?>
-                    <tr class="hover:bg-slate-50 transition-colors">
+                    <tr class="hover:bg-slate-50 transition-colors h-16">
                         <td class="px-4 py-4 text-center font-medium text-slate-500"><?= $no++ ?></td>
-                        <td class="px-4 py-4 font-bold text-slate-800 text-base uppercase">
-                            <?= esc($r['nama_ruangan']) ?>
+
+                        <td class="px-4 py-4 min-w-[250px] align-middle">
+                            <div id="view-ruangan-<?= $r['id'] ?>" class="flex items-center group">
+                                <span class="font-bold text-slate-800 text-base uppercase cursor-pointer hover:text-blue-600 transition border-b-2 border-transparent hover:border-blue-400" onclick="enableEditRuangan(<?= $r['id'] ?>)" title="Klik untuk edit">
+                                    <?= esc($r['nama_ruangan']) ?>
+                                </span>
+                                <button type="button" onclick="enableEditRuangan(<?= $r['id'] ?>)" class="ml-2 text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition focus:opacity-100 p-1 rounded-full hover:bg-slate-100" title="Edit Nama Ruangan">
+                                    ✏️
+                                </button>
+                            </div>
+
+                            <form action="/panel/ruangan/update/<?= $r['id'] ?>" method="POST" id="form-ruangan-<?= $r['id'] ?>" class="hidden items-center gap-1 w-full max-w-sm">
+                                <?= csrf_field() ?>
+                                <input type="text" name="nama_ruangan" id="input-ruangan-<?= $r['id'] ?>" value="<?= esc($r['nama_ruangan']) ?>" class="flex-1 px-3 py-1.5 text-sm font-bold uppercase text-slate-800 border-2 border-blue-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-200 shadow-sm transition" required onkeydown="if(event.key === 'Escape') disableEditRuangan(<?= $r['id'] ?>)">
+
+                                <button type="submit" class="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-sm transition flex-shrink-0" title="Simpan (Enter)">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </button>
+                                <button type="button" onclick="disableEditRuangan(<?= $r['id'] ?>)" class="p-1.5 bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300 transition flex-shrink-0" title="Batal (Esc)">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </form>
                         </td>
+
                         <td class="px-4 py-4 text-center">
                             <?php if ($r['jumlah_siswa'] > 0): ?>
-                                <span class="px-3 py-1 bg-blue-100 text-blue-700 font-bold rounded-full text-xs shadow-sm">
+                                <button onclick="bukaModalListSiswa(<?= $r['id'] ?>, '<?= esc($r['nama_ruangan'], 'js') ?>')" class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold rounded-full text-xs shadow-sm transition transform hover:scale-105 active:scale-95 cursor-pointer">
                                     👥 <?= $r['jumlah_siswa'] ?> Siswa
-                                </span>
+                                </button>
                             <?php else: ?>
                                 <span class="px-3 py-1 bg-slate-100 text-slate-400 font-bold rounded-full text-xs border border-slate-200">
                                     Kosong
@@ -129,7 +154,22 @@
 
             <div class="p-4 bg-emerald-50 border-b border-emerald-100 shrink-0">
                 <div class="flex gap-2">
-                    <input type="text" id="searchSiswa" onkeyup="filterSiswa()" placeholder="Ketik Kelas (Misal: XII RPL 1) atau Nama..." class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+
+                        <input type="text" id="searchSiswa" oninput="filterSiswa()" placeholder="Ketik Kelas (Misal: XII RPL 1) atau Nama..." class="w-full pl-9 pr-10 py-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm transition">
+
+                        <div id="loadingSpinner" class="absolute inset-y-0 right-0 items-center pr-3 pointer-events-none hidden">
+                            <svg class="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </div>
                     <button type="button" onclick="checkSemuaTerfilter()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition shadow-sm whitespace-nowrap">
                         ☑️ Centang Tampil
                     </button>
@@ -147,6 +187,24 @@
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="modalListSiswa" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 backdrop-blur-sm transition-opacity opacity-0 py-6">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform scale-95 transition-transform flex flex-col max-h-full" id="modalListSiswaContent">
+        <div class="bg-blue-600 px-6 py-4 flex justify-between items-center shrink-0">
+            <h3 class="font-bold text-white flex items-center">
+                <span class="text-xl mr-2">📋</span> Penghuni: <span id="labelDetailRuangan" class="ml-1 text-blue-100 uppercase underline decoration-2 underline-offset-4"></span>
+            </h3>
+            <button type="button" onclick="tutupModalListSiswa()" class="text-blue-200 hover:text-white transition text-xl">✖</button>
+        </div>
+
+        <div class="overflow-y-auto flex-1 p-4 bg-slate-50 custom-scrollbar" id="containerListSiswa">
+        </div>
+
+        <div class="px-6 py-4 bg-white border-t border-slate-200 flex justify-end shrink-0">
+            <button type="button" onclick="tutupModalListSiswa()" class="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 font-bold transition">Tutup</button>
+        </div>
     </div>
 </div>
 
@@ -181,24 +239,37 @@
         toggleModal(mRuangan, cRuangan, false);
     }
 
-    // 3. Modul Dynamic Plot Siswa (Zero-Lag Engine)
+    // 3. Helper Anti XSS
+    function escapeHtml(text) {
+        return text == null ? '' : String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // 4. Modul Dynamic Plot Siswa
     const mPlot = document.getElementById('modalPlot');
     const cPlot = document.getElementById('modalPlotContent');
-    const dataSiswa = <?= json_encode($siswa) ?>; // Menyedot data array PHP langsung ke JavaScript!
+    const dataSiswa = <?= json_encode($siswa) ?>;
 
     function bukaModalPlot(ruanganId, namaRuangan) {
         document.getElementById('inputPlotRuanganId').value = ruanganId;
         document.getElementById('labelNamaRuangan').innerText = namaRuangan;
-        document.getElementById('searchSiswa').value = ''; // Reset Pencarian
+
+        document.getElementById('searchSiswa').value = '';
+
+        // Reset Spinner (CSS Tailwind Conflict Fix)
+        document.getElementById('loadingSpinner').classList.add('hidden');
+        document.getElementById('loadingSpinner').classList.remove('flex');
 
         let htmlList = '';
 
         dataSiswa.forEach(s => {
-            // Cek apakah siswa saat ini sudah menjadi penghuni ruangan ini
             let isChecked = (s.ruangan_id == ruanganId) ? 'checked' : '';
-
-            // Badge Keterangan Status Ruangan Asal
             let badge = '';
+
             if (s.ruangan_id && s.ruangan_id != ruanganId) {
                 badge = '<span class="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded ml-2 font-bold border border-red-200">Di Ruangan Lain</span>';
             } else if (s.ruangan_id == ruanganId) {
@@ -206,13 +277,14 @@
             }
 
             let kelasStr = s.tingkat + ' ' + s.jurusan + ' ' + s.rombel;
+            let keywordRaw = s.nama_lengkap + ' ' + kelasStr;
 
             htmlList += `
-            <label class="siswa-item flex items-center p-3 mb-1 bg-white border border-slate-200 rounded-lg hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer transition-colors shadow-sm">
+            <label class="siswa-item flex items-center p-3 mb-1 bg-white border border-slate-200 rounded-lg hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer transition-colors shadow-sm" data-search="${escapeHtml(keywordRaw.toLowerCase())}">
                 <input type="checkbox" name="siswa_ids[]" value="${s.id}" ${isChecked} class="w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
                 <div class="ml-4 flex-1">
-                    <p class="text-sm font-bold text-slate-800 uppercase tracking-wide nama-teks">${s.nama_lengkap} ${badge}</p>
-                    <p class="text-[11px] text-slate-500 font-bold kelas-teks mt-0.5">NISN: <span class="text-blue-600 font-mono mr-2">${s.nisn}</span> KELAS: ${kelasStr}</p>
+                    <p class="text-sm font-bold text-slate-800 uppercase tracking-wide nama-teks">${escapeHtml(s.nama_lengkap)} ${badge}</p>
+                    <p class="text-[11px] text-slate-500 font-bold kelas-teks mt-0.5">NISN: <span class="text-blue-600 font-mono mr-2">${escapeHtml(s.nisn)}</span> KELAS: ${escapeHtml(kelasStr)}</p>
                 </div>
             </label>
             `;
@@ -226,32 +298,115 @@
         toggleModal(mPlot, cPlot, false);
     }
 
-    // 4. Fitur Realtime Search Filter (Super Cepat!)
+    // 5. Fitur Realtime Search Filter
+    let filterTimeout;
+
     function filterSiswa() {
-        let keyword = document.getElementById('searchSiswa').value.toLowerCase();
+        // Tampilkan Spinner (CSS Tailwind Conflict Fix)
+        document.getElementById('loadingSpinner').classList.remove('hidden');
+        document.getElementById('loadingSpinner').classList.add('flex');
+
+        clearTimeout(filterTimeout);
+
+        filterTimeout = setTimeout(() => {
+            let keyword = document.getElementById('searchSiswa').value.toLowerCase();
+            let items = document.querySelectorAll('.siswa-item');
+
+            requestAnimationFrame(() => {
+                items.forEach(item => {
+                    let searchString = item.getAttribute('data-search');
+                    item.style.display = searchString.includes(keyword) ? 'flex' : 'none';
+                });
+
+                // Hilangkan Spinner (CSS Tailwind Conflict Fix)
+                document.getElementById('loadingSpinner').classList.add('hidden');
+                document.getElementById('loadingSpinner').classList.remove('flex');
+            });
+        }, 300);
+    }
+
+    // 6. Fitur Toggle Centang Massal
+    let isCheckedAll = false;
+
+    function checkSemuaTerfilter() {
+        isCheckedAll = !isCheckedAll;
         let items = document.querySelectorAll('.siswa-item');
+        let count = 0;
 
         items.forEach(item => {
-            let nama = item.querySelector('.nama-teks').innerText.toLowerCase();
-            let kelas = item.querySelector('.kelas-teks').innerText.toLowerCase();
-
-            if (nama.includes(keyword) || kelas.includes(keyword)) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
+            if (item.style.display !== 'none') {
+                item.querySelector('input[type="checkbox"]').checked = isCheckedAll;
+                count++;
             }
+        });
+
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: count + ' siswa di' + (isCheckedAll ? 'centang' : 'hapus centangnya'),
+            showConfirmButton: false,
+            timer: 1500
         });
     }
 
-    // 5. Fitur Centang Massal Kelas (Hanya yg Terlihat di Layar)
-    function checkSemuaTerfilter() {
-        let items = document.querySelectorAll('.siswa-item');
-        items.forEach(item => {
-            if (item.style.display !== 'none') {
-                item.querySelector('input[type="checkbox"]').checked = true;
+    // 7. Modul Modal List Detail Siswa
+    const mListSiswa = document.getElementById('modalListSiswa');
+    const cListSiswa = document.getElementById('modalListSiswaContent');
+
+    function bukaModalListSiswa(ruanganId, namaRuangan) {
+        document.getElementById('labelDetailRuangan').innerText = namaRuangan;
+        let htmlList = '';
+        let no = 1;
+
+        dataSiswa.forEach(s => {
+            if (s.ruangan_id == ruanganId) {
+                let kelasStr = s.tingkat + ' ' + s.jurusan + ' ' + s.rombel;
+                htmlList += `
+                <div class="flex items-center p-3 mb-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 transition-colors">
+                    <div class="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-700 font-bold rounded-full text-xs mr-3 shrink-0">${no++}</div>
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-slate-800 uppercase tracking-wide">${escapeHtml(s.nama_lengkap)}</p>
+                        <p class="text-[11px] text-slate-500 font-bold mt-0.5">NISN: <span class="text-blue-600 font-mono mr-2">${escapeHtml(s.nisn)}</span> KELAS: ${escapeHtml(kelasStr)}</p>
+                    </div>
+                </div>
+                `;
             }
         });
-        showToast("Semua siswa yang tampil berhasil dicentang!", "success");
+
+        if (htmlList === '') htmlList = '<div class="text-center py-8 text-slate-400 font-medium">Data penghuni tidak ditemukan.</div>';
+
+        document.getElementById('containerListSiswa').innerHTML = htmlList;
+        toggleModal(mListSiswa, cListSiswa, true);
+    }
+
+    function tutupModalListSiswa() {
+        toggleModal(mListSiswa, cListSiswa, false);
+    }
+
+    // 8. Modul Inline Edit Nama Ruangan
+    function enableEditRuangan(id) {
+        document.getElementById('view-ruangan-' + id).classList.add('hidden');
+        document.getElementById('view-ruangan-' + id).classList.remove('flex');
+
+        let form = document.getElementById('form-ruangan-' + id);
+        form.classList.remove('hidden');
+        form.classList.add('flex');
+
+        let input = document.getElementById('input-ruangan-' + id);
+        input.focus();
+        let val = input.value;
+        input.value = '';
+        input.value = val; // Force kursor ke paling belakang text
+    }
+
+    function disableEditRuangan(id) {
+        let form = document.getElementById('form-ruangan-' + id);
+        form.classList.add('hidden');
+        form.classList.remove('flex');
+
+        document.getElementById('view-ruangan-' + id).classList.remove('hidden');
+        document.getElementById('view-ruangan-' + id).classList.add('flex');
     }
 
     // Core Animation Modal

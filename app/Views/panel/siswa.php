@@ -44,14 +44,23 @@
 
     <div class="flex flex-wrap gap-2 w-full lg:w-auto">
         <button id="btnBulkDelete" onclick="konfirmasiHapusBatch()" class="hidden flex-1 lg:flex-none justify-center bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm transition shadow items-center animate-pulse">
-            <span class="mr-2">🗑️</span> Hapus Terpilih (<span id="countSelected">0</span>)
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+            Hapus Terpilih (<span id="countSelected">0</span>)
         </button>
 
         <button onclick="bukaModalSiswa()" class="flex-1 lg:flex-none justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm transition shadow flex items-center">
-            <span class="mr-2">➕</span> Tambah Manual
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Tambah Manual
         </button>
         <button onclick="bukaModalImport()" class="flex-1 lg:flex-none justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-bold text-sm transition shadow flex items-center">
-            <span class="mr-2">📁</span> Import Excel
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+            </svg>
+            Import Excel
         </button>
     </div>
 </div>
@@ -130,7 +139,12 @@
                         <td class="px-4 py-3 text-center font-medium text-slate-500"><?= $no++ ?></td>
                         <td class="px-4 py-3">
                             <div class="font-bold text-blue-600 text-base"><?= esc($s['nisn']) ?></div>
-                            <div class="text-[10px] text-emerald-600 font-mono mt-0.5">🔑 <?= esc($s['password_plain'] ?? 'siswa123') ?></div>
+                            <div class="text-[10px] text-emerald-600 font-mono mt-0.5 flex items-center">
+                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                                </svg>
+                                <?= esc($s['password_plain'] ?? 'siswa123') ?>
+                            </div>
                         </td>
                         <td class="px-4 py-3 font-bold text-slate-800 uppercase tracking-wide truncate pr-4">
                             <?= esc($s['nama_lengkap']) ?>
@@ -142,7 +156,7 @@
                         </td>
                         <td class="px-4 py-3 text-center">
                             <div class="flex items-center justify-center gap-2">
-                                <button onclick='editSiswa(<?= json_encode($s) ?>)' class="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-lg transition shadow-sm" title="Edit Data">
+                                <button onclick="editSiswa(<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>)" class="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 rounded-lg transition shadow-sm" title="Edit Data">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                     </svg>
@@ -163,7 +177,9 @@
                 <?php if (empty($siswa)): ?>
                     <tr>
                         <td colspan="6" class="px-6 py-16 text-center text-slate-500 bg-slate-50">
-                            <span class="text-4xl block mb-3">🔍</span>
+                            <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
                             <p class="font-semibold text-slate-600">Data Siswa Kosong</p>
                             <p class="text-xs text-slate-400 mt-1">Belum ada data atau pencarian tidak ditemukan.</p>
                         </td>
@@ -210,8 +226,17 @@
 <div id="modalSiswa" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 backdrop-blur-sm transition-opacity opacity-0">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform scale-95 transition-transform" id="modalSiswaContent">
         <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
-            <h3 class="font-bold text-white" id="modalTitle">Tambah Siswa Baru</h3>
-            <button type="button" onclick="tutupModalSiswa()" class="text-slate-400 hover:text-white transition">✖</button>
+            <h3 class="font-bold text-white flex items-center gap-2" id="modalTitle">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Tambah Siswa Baru
+            </h3>
+            <button type="button" onclick="tutupModalSiswa()" class="text-slate-400 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
         </div>
 
         <form action="/panel/siswa/store" method="POST" id="formSiswa">
@@ -265,7 +290,8 @@
                 <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md transition flex items-center">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-                    </svg> Simpan Data
+                    </svg>
+                    Simpan Data
                 </button>
             </div>
         </form>
@@ -275,8 +301,17 @@
 <div id="modalImport" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 backdrop-blur-sm transition-opacity opacity-0">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform scale-95 transition-transform" id="modalImportContent">
         <div class="bg-emerald-600 px-6 py-4 flex justify-between items-center">
-            <h3 class="font-bold text-white">Import Data Siswa</h3>
-            <button type="button" onclick="tutupModalImport()" class="text-emerald-100 hover:text-white transition">✖</button>
+            <h3 class="font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Import Data Siswa
+            </h3>
+            <button type="button" onclick="tutupModalImport()" class="text-emerald-100 hover:text-white transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
         </div>
 
         <form action="/panel/siswa/import" method="POST" enctype="multipart/form-data" id="formImportSiswa">
@@ -298,7 +333,10 @@
             <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
                 <button type="button" onclick="tutupModalImport()" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-semibold hover:bg-slate-200 transition">Batal</button>
                 <button type="submit" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md transition flex items-center">
-                    🚀 Upload & Import
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    Upload & Import
                 </button>
             </div>
         </form>
@@ -421,7 +459,6 @@
         });
     }
 
-
     // ==========================================
     // MANAJEMEN MODAL DAN FUNGSI LAINNYA
     // ==========================================
@@ -430,14 +467,14 @@
     const fSiswa = document.getElementById('formSiswa');
 
     function bukaModalSiswa() {
-        document.getElementById('modalTitle').innerText = 'Tambah Siswa Baru';
+        document.getElementById('modalTitle').innerHTML = '<svg class="w-5 h-5 text-blue-400 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Tambah Siswa Baru';
         fSiswa.action = '/panel/siswa/store';
         fSiswa.reset();
         toggleModal(mSiswa, cSiswa, true);
     }
 
     function editSiswa(data) {
-        document.getElementById('modalTitle').innerText = 'Edit Data Siswa';
+        document.getElementById('modalTitle').innerHTML = '<svg class="w-5 h-5 text-amber-400 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> Edit Data Siswa';
         fSiswa.action = '/panel/siswa/update/' + data.id;
 
         document.getElementById('inputNisn').value = data.nisn;
@@ -532,12 +569,13 @@
                             <span id="importProgressCount">0 / 0</span>
                         </div>
                         <div class="grid grid-cols-2 gap-3 text-sm text-center">
-                            <div class="bg-emerald-50 text-emerald-700 py-2 rounded-lg border border-emerald-200 font-bold shadow-sm">
-                                ✅ Sukses: <span id="importSuccessCount" class="text-lg">0</span>
+                            <div class="bg-emerald-50 text-emerald-700 py-2 rounded-lg border border-emerald-200 font-bold shadow-sm flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Sukses: <span id="importSuccessCount" class="text-lg ml-1">0</span>
                             </div>
-                            <div class="bg-amber-50 text-amber-700 py-2 rounded-lg border border-amber-200 font-bold shadow-sm flex flex-col justify-center">
-                                <span>⚠️ Gagal</span>
-                                <span id="importFailCount" class="text-lg">0</span>
+                            <div class="bg-amber-50 text-amber-700 py-2 rounded-lg border border-amber-200 font-bold shadow-sm flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                Gagal: <span id="importFailCount" class="text-lg ml-1">0</span>
                             </div>
                         </div>
                     </div>
@@ -568,8 +606,6 @@
 
                         const totalRows = resInit.total;
                         const tempId = resInit.temp_id;
-
-                        // KUNCI OPTIMASI: Chunk Size diset 25 agar memori dan progress bar stabil!
                         const chunkSize = 25;
 
                         let totalSuccess = 0;
@@ -577,7 +613,6 @@
 
                         document.getElementById('importProgressCount').innerText = `0 / ${totalRows}`;
 
-                        // Looping memproses tiap chunk (potongan data)
                         for (let offset = 0; offset < totalRows; offset += chunkSize) {
                             let chunkData = new window.FormData();
                             chunkData.append('step', 'process');
@@ -619,7 +654,6 @@
                             </span>
                         `;
 
-                        // Tahap Akhir: Menghapus file temporari di server
                         let finishData = new window.FormData();
                         finishData.append('step', 'finish');
                         finishData.append('temp_id', tempId);
@@ -634,10 +668,10 @@
                         let iconAlert = 'success';
 
                         if (totalFailed > 0) {
-                            finishHTML = `<div class="text-sm text-left">Proses import selesai dengan beberapa kendala.<br><br><b>✅ Sukses:</b> ${totalSuccess} data berhasil.<br><b>⚠️ Gagal / Duplikat:</b> ${totalFailed} data ditolak.</div>`;
+                            finishHTML = `<div class="text-sm text-left">Proses import selesai dengan beberapa kendala.<br><br><span class="flex items-center text-emerald-600 font-bold mt-2"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Sukses:</span> ${totalSuccess} data berhasil.<br><span class="flex items-center text-amber-600 font-bold mt-2"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> Gagal / Duplikat:</span> ${totalFailed} data ditolak.</div>`;
                             iconAlert = 'warning';
                         } else {
-                            finishHTML = `<div class="text-sm text-left"><b>🎉 100% Sukses!</b><br><br>Sebanyak <b>${totalSuccess}</b> data berhasil diimport ke sistem tanpa ada yang gagal.</div>`;
+                            finishHTML = `<div class="text-sm text-left"><span class="flex items-center text-emerald-600 font-bold text-lg mb-2"><svg class="w-6 h-6 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 100% Sukses!</span>Sebanyak <b>${totalSuccess}</b> data berhasil diimport ke sistem tanpa ada yang gagal.</div>`;
                         }
 
                         Swal.fire({

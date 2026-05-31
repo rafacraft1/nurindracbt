@@ -77,6 +77,8 @@ class PenilaianController extends BaseController
             return redirect()->to('/panel/penilaian')->with('error', 'Akses Ditolak! Anda bukan pengampu mata pelajaran ini.');
         }
 
+        $rombelFilter = $this->request->getGet('rombel');
+
         $semuaJadwalSerumpun = $this->jadwalModel->where('mapel_id', $jadwalRef['mapel_id'])
             ->where('tingkat', $jadwalRef['tingkat'])
             ->where('jurusan', $jadwalRef['jurusan'])
@@ -88,20 +90,36 @@ class PenilaianController extends BaseController
         if (empty($arrJadwalIds)) $arrJadwalIds = [0];
 
         $db = \Config\Database::connect();
-        $siswa = $db->table('siswa')
+
+        $listRombel = $db->table('siswa')
+            ->select('rombel')
+            ->where('tingkat', $jadwalRef['tingkat'])
+            ->where('jurusan', $jadwalRef['jurusan'])
+            ->where('rombel !=', '')
+            ->groupBy('rombel')
+            ->orderBy('rombel', 'ASC')
+            ->get()->getResultArray();
+
+        $builderSiswa = $db->table('siswa')
             ->select('siswa.id, siswa.nisn, siswa.nama_lengkap, siswa.tingkat, siswa.jurusan, siswa.rombel, hasil_ujian.nilai_pg, hasil_ujian.nilai_essai, hasil_ujian.status, master_jenis_ujian.nama_ujian as keterangan_ujian, hasil_ujian.jadwal_id as actual_jadwal_id')
             ->join('hasil_ujian', "hasil_ujian.siswa_id = siswa.id AND hasil_ujian.jadwal_id IN (" . implode(',', $arrJadwalIds) . ")", 'left')
             ->join('jadwal_ujian', 'jadwal_ujian.id = hasil_ujian.jadwal_id', 'left')
             ->join('master_jenis_ujian', 'master_jenis_ujian.id = jadwal_ujian.jenis_ujian_id', 'left')
             ->where('siswa.tingkat', $jadwalRef['tingkat'])
-            ->where('siswa.jurusan', $jadwalRef['jurusan'])
-            ->orderBy('siswa.nama_lengkap', 'ASC')
-            ->get()->getResultArray();
+            ->where('siswa.jurusan', $jadwalRef['jurusan']);
+
+        if (!empty($rombelFilter)) {
+            $builderSiswa->where('siswa.rombel', $rombelFilter);
+        }
+
+        $siswa = $builderSiswa->orderBy('siswa.nama_lengkap', 'ASC')->get()->getResultArray();
 
         $data = [
-            'title'  => 'Detail Nilai: ' . $jadwalRef['nama_mapel'],
-            'jadwal' => $jadwalRef,
-            'siswa'  => $siswa
+            'title'        => 'Detail Nilai: ' . $jadwalRef['nama_mapel'],
+            'jadwal'       => $jadwalRef,
+            'siswa'        => $siswa,
+            'listRombel'   => $listRombel,
+            'rombelFilter' => $rombelFilter
         ];
 
         return view('panel/penilaian/detail', $data);
@@ -131,7 +149,8 @@ class PenilaianController extends BaseController
             'siswa'        => $siswa,
             'hasil'        => $hasil,
             'soal_essai'   => $soalEssai,
-            'jawaban_json' => json_decode((string)$hasil['jawaban_peserta'], true)
+            'jawaban_json' => json_decode((string)$hasil['jawaban_peserta'], true),
+            'rombelFilter' => $this->request->getGet('rombel')
         ];
 
         return view('panel/penilaian/koreksi', $data);
@@ -142,6 +161,7 @@ class PenilaianController extends BaseController
         $jadwalId   = (string)$this->request->getPost('jadwal_id');
         $siswaId    = (string)$this->request->getPost('siswa_id');
         $nilaiEssai = (float)$this->request->getPost('nilai_essai');
+        $rombelFilter = $this->request->getPost('rombel');
 
         $jadwal = $this->jadwalModel->find($jadwalId);
         if (!$jadwal || !$this->verifyMapelAccess($jadwal['mapel_id'])) {
@@ -153,7 +173,12 @@ class PenilaianController extends BaseController
             $this->hasilUjianModel->update($hasil['id'], ['nilai_essai' => $nilaiEssai]);
         }
 
-        return redirect()->to("/panel/penilaian/detail/$jadwalId")->with('success', 'Nilai Essai berhasil disimpan!');
+        $redirectUrl = "/panel/penilaian/detail/$jadwalId";
+        if (!empty($rombelFilter)) {
+            $redirectUrl .= '?rombel=' . urlencode((string)$rombelFilter);
+        }
+
+        return redirect()->to($redirectUrl)->with('success', 'Nilai Essai berhasil disimpan!');
     }
 
     public function exportExcel(string $jadwalId)
@@ -168,6 +193,8 @@ class PenilaianController extends BaseController
             return redirect()->to('/panel/penilaian')->with('error', 'Otoritas Gagal!');
         }
 
+        $rombelFilter = $this->request->getGet('rombel');
+
         $semuaJadwalSerumpun = $this->jadwalModel->where('mapel_id', $jadwalRef['mapel_id'])
             ->where('tingkat', $jadwalRef['tingkat'])
             ->where('jurusan', $jadwalRef['jurusan'])
@@ -179,19 +206,25 @@ class PenilaianController extends BaseController
         if (empty($arrJadwalIds)) $arrJadwalIds = [0];
 
         $db = \Config\Database::connect();
-        $siswa = $db->table('siswa')
+        $builderSiswa = $db->table('siswa')
             ->select('siswa.*, hasil_ujian.nilai_pg, hasil_ujian.nilai_essai, hasil_ujian.status, master_jenis_ujian.nama_ujian as keterangan_ujian')
             ->join('hasil_ujian', "hasil_ujian.siswa_id = siswa.id AND hasil_ujian.jadwal_id IN (" . implode(',', $arrJadwalIds) . ")", 'left')
             ->join('jadwal_ujian', 'jadwal_ujian.id = hasil_ujian.jadwal_id', 'left')
             ->join('master_jenis_ujian', 'master_jenis_ujian.id = jadwal_ujian.jenis_ujian_id', 'left')
             ->where('siswa.tingkat', $jadwalRef['tingkat'])
-            ->where('siswa.jurusan', $jadwalRef['jurusan'])
-            ->orderBy('siswa.nama_lengkap', 'ASC')
-            ->get()->getResultArray();
+            ->where('siswa.jurusan', $jadwalRef['jurusan']);
+
+        if (!empty($rombelFilter)) {
+            $builderSiswa->where('siswa.rombel', $rombelFilter);
+        }
+
+        $siswa = $builderSiswa->orderBy('siswa.nama_lengkap', 'ASC')->get()->getResultArray();
 
         $spreadsheet = $this->excelService->buildRekapNilaiExcel($jadwalRef, $siswa);
         $writer      = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $fileName    = 'Nilai_' . str_replace(' ', '_', $jadwalRef['nama_mapel']) . '_' . $jadwalRef['tingkat'] . '_' . $jadwalRef['jurusan'] . '.xlsx';
+
+        $namaRombelStr = !empty($rombelFilter) ? '_' . str_replace(' ', '_', $rombelFilter) : '_SEMUA_KELAS';
+        $fileName    = 'Nilai_' . str_replace(' ', '_', $jadwalRef['nama_mapel']) . '_' . $jadwalRef['tingkat'] . '_' . $jadwalRef['jurusan'] . $namaRombelStr . '.xlsx';
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="' . urlencode($fileName) . '"');
@@ -206,15 +239,17 @@ class PenilaianController extends BaseController
         $jenisUjianId = $this->request->getPost('jenis_ujian_id');
         $ruanganId    = $this->request->getPost('ruangan_id');
         $pengawasId   = $this->request->getPost('pengawas_id');
-        $waktuMulai   = $this->request->getPost('waktu_mulai');
-        $waktuSelesai = $this->request->getPost('waktu_selesai');
+
+        // FIX: Konversi Format DateTime-Local
+        $waktuMulai   = date('Y-m-d H:i:s', strtotime((string)$this->request->getPost('waktu_mulai')));
+        $waktuSelesai = date('Y-m-d H:i:s', strtotime((string)$this->request->getPost('waktu_selesai')));
+
         $durasi       = (int)$this->request->getPost('durasi');
 
         if (!$this->verifyMapelAccess($mapelId)) {
             return redirect()->back()->with('error', 'Akses Ditolak! Anda bukan pengampu mapel ini.');
         }
 
-        // VALIDASI ALUR: Mencegah pembuatan susulan ganda jika jadwal sebelumnya belum selesai dilaksanakan
         $jadwalBelumSelesai = $this->jadwalModel
             ->where('mapel_id', $mapelId)
             ->where('tingkat', $tingkat)
@@ -253,7 +288,6 @@ class PenilaianController extends BaseController
                 if ($jr['jurusan'] === $jurusan) $jadwalIdsJurusan[] = $jr['id'];
             }
 
-            // Fixed Query: Menyapu bersih siswa pending, progress, maupun yang tidak hadir sama sekali (NULL)
             $siswaSusulan = $db->table('siswa')
                 ->select('siswa.id as siswa_id')
                 ->join('hasil_ujian', "hasil_ujian.siswa_id = siswa.id AND hasil_ujian.jadwal_id IN (" . implode(',', $jadwalIdsJurusan) . ")", 'left')

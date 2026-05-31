@@ -18,32 +18,10 @@ class MapelController extends BaseController
     {
         $db = \Config\Database::connect();
 
-        $mapel = $this->mapelModel->orderBy('nama_mapel', 'ASC')->findAll();
-        $semua_guru = $db->table('staff')->where('role', 'guru')->orderBy('nama_lengkap', 'ASC')->get()->getResultArray();
-
-        // Menyusun statistik (Bisa dipindah ke model jika querynya makin kompleks di masa depan)
-        foreach ($mapel as &$m) {
-            $m['guru_pengampu'] = $db->table('guru_mapel')
-                ->select('staff.id, staff.nama_lengkap')
-                ->join('staff', 'staff.id = guru_mapel.guru_id')
-                ->where('mapel_id', $m['id'])
-                ->get()->getResultArray();
-
-            $m['total_pg'] = $db->table('bank_soal')
-                ->where('mapel_id', $m['id'])
-                ->where('jenis_soal', 'pg')
-                ->countAllResults();
-
-            $m['total_essai'] = $db->table('bank_soal')
-                ->where('mapel_id', $m['id'])
-                ->where('jenis_soal', 'essai')
-                ->countAllResults();
-        }
-
         $data = [
             'title'      => 'Manajemen Mata Pelajaran - CBT PRO',
-            'mapel'      => $mapel,
-            'semua_guru' => $semua_guru
+            'mapel'      => $this->mapelModel->getMapelWithStats(), // Panggil fungsi optimal dari Model
+            'semua_guru' => $db->table('staff')->where('role', 'guru')->orderBy('nama_lengkap', 'ASC')->get()->getResultArray()
         ];
 
         return view('panel/mapel', $data);
@@ -76,20 +54,40 @@ class MapelController extends BaseController
     public function delete(string $id): ResponseInterface
     {
         $db = \Config\Database::connect();
-        $db->table('guru_mapel')->where('mapel_id', $id)->delete();
 
+        // PROTEKSI RELASI: Mencegah error yatim jika mapel sedang digunakan!
+        if ($db->table('bank_soal')->where('mapel_id', $id)->countAllResults() > 0) {
+            return redirect()->back()->with('error', 'Gagal Dihapus! Mapel ini sedang memiliki Bank Soal.');
+        }
+        if ($db->table('jadwal_ujian')->where('mapel_id', $id)->countAllResults() > 0) {
+            return redirect()->back()->with('error', 'Gagal Dihapus! Mapel ini sedang dijadwalkan pada Ujian.');
+        }
+
+        $db->transStart(); // Mulai Transaksi (Anti Corrupt)
+        $db->table('guru_mapel')->where('mapel_id', $id)->delete();
         $this->mapelModel->delete($id);
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan sistem saat menghapus.');
+        }
+
         return redirect()->back()->with('success', 'Mata Pelajaran berhasil dihapus.');
     }
 
     public function syncGuru(): ResponseInterface
     {
         $mapel_id = (string)$this->request->getPost('mapel_id');
-        $guru_ids = $this->request->getPost('guru_ids'); // berupa array
+        $guru_ids = $this->request->getPost('guru_ids');
+
+        // Validasi Injeksi ID Fiktif
+        if (!$this->mapelModel->find($mapel_id)) {
+            return redirect()->back()->with('error', 'Mata pelajaran tidak valid!');
+        }
 
         $db = \Config\Database::connect();
-
         $db->transStart();
+
         $db->table('guru_mapel')->where('mapel_id', $mapel_id)->delete();
 
         if (!empty($guru_ids) && is_array($guru_ids)) {

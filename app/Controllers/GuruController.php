@@ -36,7 +36,6 @@ class GuruController extends BaseController
                 ->findAll();
         }
 
-        // OPTIMASI: Bulk Grouping Count untuk menyelesaikan masalah N+1 Query
         $mapelIds = array_column($mapel, 'id');
         $counts = [];
 
@@ -101,11 +100,26 @@ class GuruController extends BaseController
             'created_at' => date('Y-m-d H:i:s')
         ];
 
+        // LOGIKA UPLOAD AUDIO (DENGAN PROTEKSI KEAMANAN KETAT)
         $audioFile = $this->request->getFile('file_audio');
         if ($audioFile && $audioFile->isValid() && !$audioFile->hasMoved()) {
-            if ($audioFile->getSize() > 2048000) {
-                return redirect()->back()->with('error', 'Ukuran file audio maksimal 2MB!');
+
+            // SECURITY PATCH: Validasi MIME & Ekstensi Anti-Webshell
+            $aturanValidasi = [
+                'file_audio' => [
+                    'rules'  => 'max_size[file_audio,2048]|ext_in[file_audio,mp3,wav,ogg]|mime_in[file_audio,audio/mpeg,audio/x-mpeg,audio/mp3,audio/x-mp3,audio/mpeg3,audio/x-mpeg3,audio/wav,audio/x-wav,audio/ogg]',
+                    'errors' => [
+                        'max_size' => 'Gagal! Ukuran file audio maksimal adalah 2MB.',
+                        'ext_in'   => 'Gagal! Ekstensi file yang diizinkan hanya .mp3, .wav, atau .ogg.',
+                        'mime_in'  => 'Gagal! File terdeteksi bukan rekaman audio asli (MIME tidak valid).'
+                    ]
+                ]
+            ];
+
+            if (!$this->validate($aturanValidasi)) {
+                return redirect()->back()->withInput()->with('error', $this->validator->getError('file_audio'));
             }
+
             $newName = $audioFile->getRandomName();
             $audioFile->move(FCPATH . 'uploads/audio', $newName);
             $dataInsert['file_audio'] = $newName;
@@ -119,7 +133,7 @@ class GuruController extends BaseController
                 'D' => $this->request->getPost('opsi_d'),
                 'E' => $this->request->getPost('opsi_e'),
             ];
-            $dataInsert['opsi_jawaban']  = json_encode($opsi);
+            $dataInsert['opsi_jawaban']  = json_encode($opsi, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $dataInsert['kunci_jawaban'] = strtoupper((string)$this->request->getPost('kunci_jawaban'));
         } else {
             $dataInsert['opsi_jawaban']  = null;
@@ -138,7 +152,6 @@ class GuruController extends BaseController
             return redirect()->to('/panel/bank-soal')->with('error', 'Data soal tidak ditemukan.');
         }
 
-        // VALIDASI IDOR: Mencegah manipulasi lintas guru
         if (session()->get('role') !== 'admin' && $soal['guru_id'] != session()->get('id')) {
             return redirect()->to('/panel/bank-soal')->with('error', 'Akses Ilegal! Anda tidak berhak mengubah soal milik guru lain.');
         }
@@ -157,7 +170,6 @@ class GuruController extends BaseController
         $soalLama = $this->bankSoalModel->find($id);
         if (!$soalLama) return redirect()->back()->with('error', 'Soal tidak ditemukan.');
 
-        // VALIDASI IDOR: Mencegah manipulasi lintas guru
         if (session()->get('role') !== 'admin' && $soalLama['guru_id'] != session()->get('id')) {
             return redirect()->to('/panel/bank-soal')->with('error', 'Akses Ilegal! Anda tidak berhak mengubah soal milik guru lain.');
         }
@@ -170,21 +182,39 @@ class GuruController extends BaseController
             'pertanyaan' => $this->request->getPost('pertanyaan'),
         ];
 
+        // LOGIKA HAPUS AUDIO LAMA (JIKA DICENTANG)
         if ($this->request->getPost('hapus_audio') === '1' && !empty($soalLama['file_audio'])) {
             $oldPath = FCPATH . 'uploads/audio/' . $soalLama['file_audio'];
             if (file_exists($oldPath)) unlink($oldPath);
             $dataUpdate['file_audio'] = null;
         }
 
+        // LOGIKA UPLOAD AUDIO BARU (DENGAN PROTEKSI KEAMANAN KETAT)
         $audioFile = $this->request->getFile('file_audio');
         if ($audioFile && $audioFile->isValid() && !$audioFile->hasMoved()) {
-            if ($audioFile->getSize() > 2048000) {
-                return redirect()->back()->with('error', 'Ukuran file audio maksimal 2MB!');
+
+            // SECURITY PATCH: Validasi MIME & Ekstensi Anti-Webshell
+            $aturanValidasi = [
+                'file_audio' => [
+                    'rules'  => 'max_size[file_audio,2048]|ext_in[file_audio,mp3,wav,ogg]|mime_in[file_audio,audio/mpeg,audio/x-mpeg,audio/mp3,audio/x-mp3,audio/mpeg3,audio/x-mpeg3,audio/wav,audio/x-wav,audio/ogg]',
+                    'errors' => [
+                        'max_size' => 'Gagal! Ukuran file audio maksimal adalah 2MB.',
+                        'ext_in'   => 'Gagal! Ekstensi file yang diizinkan hanya .mp3, .wav, atau .ogg.',
+                        'mime_in'  => 'Gagal! File terdeteksi bukan rekaman audio asli (MIME tidak valid).'
+                    ]
+                ]
+            ];
+
+            if (!$this->validate($aturanValidasi)) {
+                return redirect()->back()->withInput()->with('error', $this->validator->getError('file_audio'));
             }
+
+            // Hapus file lama jika ada sebelum menimpa dengan yang baru
             if (!empty($soalLama['file_audio'])) {
                 $oldPath = FCPATH . 'uploads/audio/' . $soalLama['file_audio'];
                 if (file_exists($oldPath)) unlink($oldPath);
             }
+
             $newName = $audioFile->getRandomName();
             $audioFile->move(FCPATH . 'uploads/audio', $newName);
             $dataUpdate['file_audio'] = $newName;
@@ -198,20 +228,18 @@ class GuruController extends BaseController
                 'D' => $this->request->getPost('opsi_d'),
                 'E' => $this->request->getPost('opsi_e'),
             ];
-            $dataUpdate['opsi_jawaban']  = json_encode($opsi);
+            $dataUpdate['opsi_jawaban']  = json_encode($opsi, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $dataUpdate['kunci_jawaban'] = strtoupper((string)$this->request->getPost('kunci_jawaban'));
         } else {
             $dataUpdate['opsi_jawaban']  = null;
             $dataUpdate['kunci_jawaban'] = (string)$this->request->getPost('kunci_essai') ?: null;
         }
 
-        // OPTIMASI: Garbage Collector untuk Gambar WebP Summernote yang dihapus saat Update Soal
+        // Garbage Collector untuk Gambar Summernote
         $htmlLama = $soalLama['pertanyaan'] . ' ' . $soalLama['opsi_jawaban'] . ' ' . $soalLama['kunci_jawaban'];
         $htmlBaru = $dataUpdate['pertanyaan'] . ' ' . $dataUpdate['opsi_jawaban'] . ' ' . $dataUpdate['kunci_jawaban'];
-
         $imagesLama = $this->extractLocalImages($htmlLama);
         $imagesBaru = $this->extractLocalImages($htmlBaru);
-
         $imagesToDelete = array_diff($imagesLama, $imagesBaru);
         $this->deleteLocalImages($imagesToDelete);
 
@@ -224,7 +252,6 @@ class GuruController extends BaseController
         $soal = $this->bankSoalModel->find($id);
         if (!$soal) return redirect()->back()->with('error', 'Soal tidak ditemukan.');
 
-        // VALIDASI IDOR: Mencegah manipulasi lintas guru
         if (session()->get('role') !== 'admin' && $soal['guru_id'] != session()->get('id')) {
             return redirect()->to('/panel/bank-soal')->with('error', 'Akses Ilegal! Anda tidak berhak menghapus soal milik guru lain.');
         }
@@ -234,7 +261,6 @@ class GuruController extends BaseController
             if (file_exists($path)) unlink($path);
         }
 
-        // OPTIMASI: Garbage Collector - Menghapus fisik gambar WebP di server secara otomatis
         $htmlSoal = $soal['pertanyaan'] . ' ' . $soal['opsi_jawaban'] . ' ' . $soal['kunci_jawaban'];
         $images   = $this->extractLocalImages($htmlSoal);
         $this->deleteLocalImages($images);

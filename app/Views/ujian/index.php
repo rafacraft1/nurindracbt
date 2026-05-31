@@ -16,7 +16,6 @@ $labelZona = 'WIB';
 if ($zonaWaktu === 'Asia/Makassar') $labelZona = 'WITA';
 if ($zonaWaktu === 'Asia/Jayapura') $labelZona = 'WIT';
 
-// Logika Fallback Logo: Gunakan logo dari database jika ada, jika tidak arahkan ke folder assets/img/logo.png
 $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png');
 ?>
 <!DOCTYPE html>
@@ -52,8 +51,11 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                     <span class="text-[9px] text-blue-200 font-bold tracking-wider uppercase">Waktu Server</span>
                     <span id="serverClock" class="font-mono text-sm sm:text-base font-bold bg-blue-800/50 px-2 py-0.5 rounded border border-blue-500/30">--:--:--</span>
                 </div>
-                <button onclick="confirmLogout()" class="bg-blue-700 hover:bg-red-500 text-xs font-bold px-3 py-2 sm:py-1.5 rounded-lg transition-colors border border-blue-500 shadow-sm">
-                    Keluar
+                <button onclick="confirmLogout()" class="bg-blue-700 hover:bg-red-500 text-xs font-bold px-3 py-2 sm:py-1.5 rounded-lg transition-colors border border-blue-500 shadow-sm flex items-center">
+                    <svg class="w-4 h-4 sm:mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    <span class="hidden sm:inline">Keluar</span>
                 </button>
             </div>
         </div>
@@ -76,7 +78,12 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
             </div>
         </div>
 
-        <h3 class="font-bold text-slate-700 mb-4 px-1 flex items-center"><span class="mr-2">📝</span> Jadwal Ujian Tersedia</h3>
+        <h3 class="font-bold text-slate-700 mb-4 px-1 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            Jadwal Ujian Tersedia
+        </h3>
 
         <div class="space-y-4">
             <?php foreach ($jadwalAktif as $j):
@@ -98,18 +105,28 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                         <h4 class="text-xl font-bold text-slate-800 uppercase mb-2"><?= esc($j['nama_mapel']) ?></h4>
 
                         <div class="flex items-center text-xs text-slate-600 gap-4 mb-4">
-                            <span class="flex items-center"><span class="text-base mr-1">⏰</span> <?= $j['durasi'] ?> Menit</span>
-                            <span class="flex items-center"><span class="text-base mr-1">📅</span> <?= date('d M', strtotime($j['waktu_mulai'])) ?></span>
+                            <span class="flex items-center"><svg class="w-4 h-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg> <?= $j['durasi'] ?> Menit</span>
+                            <span class="flex items-center"><svg class="w-4 h-4 mr-1.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg> <?= date('d M', strtotime((string)$j['waktu_mulai'])) ?></span>
                         </div>
 
                         <div class="border-t border-dashed border-slate-200 pt-4 mt-2">
                             <?php if ($statusPengerjaan === 'completed'): ?>
-                                <button disabled class="w-full bg-slate-100 text-slate-400 font-bold py-3 rounded-xl border border-slate-200 flex justify-center items-center">
-                                    ✅ Ujian Selesai
+                                <button disabled class="w-full bg-slate-100 text-slate-400 font-bold py-3 rounded-xl border border-slate-200 flex justify-center items-center text-sm">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Ujian Selesai
                                 </button>
                             <?php elseif ($statusPengerjaan === 'progress'): ?>
                                 <a href="/ujian/kerjakan/<?= $j['id'] ?>" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-amber-500/30 transition flex justify-center items-center text-sm">
-                                    ✍️ Lanjutkan Mengerjakan
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                    Lanjutkan Mengerjakan
                                 </a>
                             <?php else: ?>
                                 <?php if ($j['status'] === 'active'): ?>
@@ -125,16 +142,27 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                                         </form>
                                     <?php else: ?>
                                         <div class="flex gap-2 opacity-80">
-                                            <input type="text" disabled placeholder="🔒 MENUNGGU ABSEN PENGAWAS" class="flex-1 px-4 py-3 bg-slate-100 border border-slate-300 rounded-xl outline-none font-bold text-center text-slate-500 text-xs sm:text-sm cursor-not-allowed">
+                                            <div class="flex-1 px-4 py-3 bg-slate-100 border border-slate-300 rounded-xl font-bold text-center text-slate-500 text-xs sm:text-sm flex items-center justify-center">
+                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                                </svg>
+                                                MENUNGGU ABSEN PENGAWAS
+                                            </div>
                                             <button type="button" onclick="window.location.reload()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-3 rounded-xl shadow transition text-sm flex items-center justify-center">
-                                                🔄 Cek
+                                                <svg class="w-5 h-5 sm:mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                </svg>
+                                                <span class="hidden sm:inline">Cek</span>
                                             </button>
                                         </div>
                                     <?php endif; ?>
 
                                 <?php else: ?>
-                                    <button disabled class="w-full bg-slate-100 text-slate-500 font-bold py-3 rounded-xl border border-slate-200 text-sm">
-                                        ⏳ Menunggu Pengawas Merilis Token
+                                    <button disabled class="w-full bg-slate-100 text-slate-500 font-bold py-3 rounded-xl border border-slate-200 text-sm flex items-center justify-center">
+                                        <svg class="w-5 h-5 mr-2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Menunggu Pengawas Merilis Token
                                     </button>
                                 <?php endif; ?>
                             <?php endif; ?>
@@ -145,7 +173,9 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
 
             <?php if (empty($jadwalAktif)): ?>
                 <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 border-dashed text-center">
-                    <span class="text-5xl block mb-4">🏖️</span>
+                    <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                    </svg>
                     <h3 class="font-bold text-slate-700">Tidak Ada Jadwal Tersedia</h3>
                     <p class="text-sm text-slate-500 mt-2">Belum ada ujian yang dijadwalkan untuk kelas/ruangan Anda saat ini.</p>
                 </div>
@@ -156,7 +186,6 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script>
-        // ENGINE WAKTU SERVER DIGITAL (Sudah Dinamis)
         let labelZona = "<?= $labelZona ?>";
         let serverTime = new window.Date("<?= date('Y-m-d\TH:i:s') ?>");
         setInterval(() => {

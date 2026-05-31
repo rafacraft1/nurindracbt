@@ -176,13 +176,34 @@ class AdminController extends BaseController
         ];
 
         $logoFile = $this->request->getFile('logo');
+
+        // Cek jika ada file yang diupload
         if ($logoFile && $logoFile->isValid() && !$logoFile->hasMoved()) {
+
+            // SECURITY PATCH: Validasi File di Sisi Server (Anti Webshell/RCE)
+            $aturanValidasi = [
+                'logo' => [
+                    'rules'  => 'is_image[logo]|mime_in[logo,image/png,image/jpg,image/jpeg]|max_size[logo,2048]',
+                    'errors' => [
+                        'is_image' => 'File yang diupload wajib berupa gambar.',
+                        'mime_in'  => 'Format gambar hanya diizinkan PNG, JPG, atau JPEG.',
+                        'max_size' => 'Ukuran gambar maksimal adalah 2MB.'
+                    ]
+                ]
+            ];
+
+            if (!$this->validate($aturanValidasi)) {
+                return redirect()->back()->with('error', $this->validator->getError('logo'));
+            }
+
+            // Hapus logo lama jika ada
             $pengaturanLama = $this->pengaturanModel->find(1);
             if ($pengaturanLama && !empty($pengaturanLama['logo'])) {
                 $oldPath = FCPATH . 'uploads/' . $pengaturanLama['logo'];
                 if (file_exists($oldPath)) unlink($oldPath);
             }
 
+            // Pindahkan logo baru
             $newName = $logoFile->getRandomName();
             $logoFile->move(FCPATH . 'uploads', $newName);
             $dataUpdate['logo'] = $newName;

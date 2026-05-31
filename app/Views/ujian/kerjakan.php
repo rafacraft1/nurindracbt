@@ -31,8 +31,9 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
 
     <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-xl shadow-inner">
+
+            <div class="flex items-center gap-3 w-1/3">
+                <div class="w-10 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-xl shadow-inner shrink-0">
                     <?= substr(session()->get('nama_lengkap'), 0, 1) ?>
                 </div>
                 <div class="hidden sm:block">
@@ -41,16 +42,26 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                 </div>
             </div>
 
-            <div class="text-center flex-1 md:flex-none px-4">
+            <div class="text-center w-1/3">
                 <h2 class="font-bold text-slate-800 uppercase tracking-wider text-sm md:text-base truncate"><?= esc($jadwal['nama_mapel']) ?></h2>
             </div>
 
-            <div class="flex items-center gap-2 bg-slate-800 px-3 py-1.5 md:px-4 md:py-2 rounded-lg shadow-inner">
-                <span class="text-sm md:text-xl">⏱️</span>
-                <span id="timerDisplay" class="font-mono text-white font-bold text-sm md:text-lg tracking-widest">
-                    --:--:--
-                </span>
+            <div class="flex items-center justify-end gap-2 sm:gap-3 w-1/3">
+                <div id="statusKoneksi" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] sm:text-xs font-bold transition-colors shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="dotKoneksi"></span>
+                    <span id="teksKoneksi" class="hidden sm:inline tracking-wide uppercase">Tersambung</span>
+                </div>
+
+                <div class="flex items-center gap-2 bg-slate-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-inner shrink-0">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white opacity-80 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span id="timerDisplay" class="font-mono text-white font-bold text-sm sm:text-lg tracking-widest">
+                        --:--:--
+                    </span>
+                </div>
             </div>
+
         </div>
     </header>
 
@@ -81,8 +92,11 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
             <div class="px-6 md:px-8 pb-8" id="areaJawaban"></div>
 
             <div class="bg-slate-50 border-t border-slate-200 p-4 md:p-6 flex justify-between items-center gap-2">
-                <button onclick="navigasiSoal('prev')" id="btnPrev" class="px-4 py-2.5 bg-white border border-slate-300 text-slate-600 rounded-lg font-bold shadow-sm hover:bg-slate-100 transition disabled:opacity-50 text-sm md:text-base">
-                    ⬅️<span class="hidden sm:inline ml-2">Sebelumnya</span>
+                <button onclick="navigasiSoal('prev')" id="btnPrev" class="px-4 py-2.5 bg-white border border-slate-300 text-slate-600 rounded-lg font-bold shadow-sm hover:bg-slate-100 transition disabled:opacity-50 text-sm md:text-base flex items-center">
+                    <svg class="w-5 h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    <span class="hidden sm:inline">Sebelumnya</span>
                 </button>
 
                 <label class="flex items-center gap-2 cursor-pointer bg-amber-50 border border-amber-200 px-4 py-2.5 rounded-lg hover:bg-amber-100 transition">
@@ -91,7 +105,10 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                 </label>
 
                 <button onclick="navigasiSoal('next')" id="btnNext" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition text-sm md:text-base flex items-center">
-                    <span class="hidden sm:inline mr-2" id="textBtnNext">Selanjutnya</span>➡️
+                    <span class="hidden sm:inline ml-1 mr-2" id="textBtnNext">Selanjutnya</span>
+                    <svg id="iconBtnNext" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
                 </button>
             </div>
         </div>
@@ -118,7 +135,10 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
             </div>
 
             <button onclick="konfirmasiSelesai()" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/30 transition text-sm uppercase tracking-wider flex justify-center items-center gap-2">
-                ✅ Selesai Ujian
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Selesai Ujian
             </button>
         </div>
     </main>
@@ -138,7 +158,7 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         const JSON_URL = "<?= base_url('data_soal/jadwal_' . ($jadwal['id'] ?? 0) . '.json') ?>";
         const JAWABAN_SERVER = <?= empty($hasil['jawaban_peserta']) ? 'null' : $hasil['jawaban_peserta'] ?>;
 
-        const WAKTU_SELESAI_MS = <?= strtotime($jadwal['waktu_selesai']) * 1000 ?>;
+        const WAKTU_SELESAI_MS = <?= strtotime((string)$jadwal['waktu_selesai']) * 1000 ?>;
         const GRACE_PERIOD_MS = 15 * 60 * 1000;
         const ABSOLUTE_DEADLINE = WAKTU_SELESAI_MS + GRACE_PERIOD_MS;
 
@@ -159,10 +179,52 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         let intervalWaktu;
         let timeoutAutoSave;
 
+        let csrfTokenName = '<?= csrf_token() ?>';
+        let csrfHashValue = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
         const STORAGE_KEY = `CBT_ANS_${JADWAL_ID}_${SISWA_ID}`;
         const TIME_KEY = `CBT_TIME_${JADWAL_ID}_${SISWA_ID}`;
 
+        // =====================================================================
+        // ENGINE DETEKSI KONEKSI JARINGAN SECARA REAL-TIME
+        // =====================================================================
+        function setIndikatorKoneksi(isOnline) {
+            const statusDiv = document.getElementById('statusKoneksi');
+            const dot = document.getElementById('dotKoneksi');
+            const text = document.getElementById('teksKoneksi');
+
+            if (isOnline) {
+                statusDiv.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] sm:text-xs font-bold transition-colors shadow-sm';
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+                text.innerText = 'Tersambung';
+            } else {
+                statusDiv.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 text-red-700 border border-red-200 text-[10px] sm:text-xs font-bold transition-colors shadow-sm';
+                dot.className = 'w-2 h-2 rounded-full bg-red-500';
+                text.innerText = 'Terputus';
+            }
+        }
+
+        window.addEventListener('online', () => {
+            setIndikatorKoneksi(true);
+            sinkronisasiKeServer(); // Coba kirim data yang tertunda saat internet menyala lagi
+        });
+
+        window.addEventListener('offline', () => {
+            setIndikatorKoneksi(false);
+            Toastify({
+                text: "Koneksi terputus! Jangan panik, Anda tetap bisa lanjut menjawab soal.",
+                duration: 5000,
+                style: {
+                    background: "#ef4444",
+                    borderRadius: "8px"
+                }
+            }).showToast();
+        });
+        // =====================================================================
+
         async function initUjian() {
+            setIndikatorKoneksi(navigator.onLine);
+
             try {
                 const response = await fetch(JSON_URL);
                 if (!response.ok) throw new Error("File JSON tidak ditemukan. Pastikan sudah di-Build.");
@@ -183,7 +245,7 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                             ragu: false
                         };
                     });
-                    simpanState(); // Trigger simpan awal
+                    simpanState();
                 }
 
                 initTimer();
@@ -255,12 +317,19 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
 
             const btnNext = document.getElementById('btnNext');
             const textNext = document.getElementById('textBtnNext');
+            const iconNext = document.getElementById('iconBtnNext');
             if (index === bankSoal.length - 1) {
-                textNext.innerHTML = 'Selesai 🏁';
+                textNext.innerHTML = 'Selesai';
+                iconNext.outerHTML = `<svg id="iconBtnNext" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
                 btnNext.classList.replace('bg-blue-600', 'bg-emerald-600');
+                btnNext.classList.replace('hover:bg-blue-700', 'hover:bg-emerald-700');
+                btnNext.classList.replace('shadow-blue-500/30', 'shadow-emerald-500/30');
             } else {
                 textNext.innerHTML = 'Selanjutnya';
+                iconNext.outerHTML = `<svg id="iconBtnNext" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>`;
                 btnNext.classList.replace('bg-emerald-600', 'bg-blue-600');
+                btnNext.classList.replace('hover:bg-emerald-700', 'hover:bg-blue-700');
+                btnNext.classList.replace('shadow-emerald-500/30', 'shadow-blue-500/30');
             }
             renderGrid();
         }
@@ -314,10 +383,8 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         }
 
         function simpanState() {
-            // Buffer utama ke LocalStorage agar UI super reponsif
             localStorage.setItem(STORAGE_KEY, JSON.stringify(jawabanSiswa));
 
-            // Sync Database (Debounce 1.5s)
             clearTimeout(timeoutAutoSave);
             timeoutAutoSave = setTimeout(() => {
                 sinkronisasiKeServer();
@@ -325,21 +392,41 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         }
 
         async function sinkronisasiKeServer() {
+            // Jika browser sedang offline, jangan buang resource dengan mencoba menembak ke server
+            if (!navigator.onLine) {
+                setIndikatorKoneksi(false);
+                return;
+            }
+
             try {
                 const formData = new window.FormData();
                 formData.append('jadwal_id', JADWAL_ID);
                 formData.append('jawaban', JSON.stringify(jawabanSiswa));
+                formData.append(csrfTokenName, csrfHashValue);
 
-                // Pastikan token CSRF (Jika diaktifkan Global) terinjeksi lewat logic front.php
                 const response = await fetch('/ujian/simpan-jawaban-ajax', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 });
 
                 if (!response.ok) {
-                    console.warn("Autosave API mengembalikan status error.");
+                    setIndikatorKoneksi(false);
+                    return;
                 }
+
+                const data = await response.json();
+
+                if (data.status === 'success' && data.csrfHash) {
+                    setIndikatorKoneksi(true);
+                    csrfHashValue = data.csrfHash;
+                    document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfHashValue);
+                }
+
             } catch (error) {
+                setIndikatorKoneksi(false);
                 console.error("Gagal sinkronisasi jawaban ke server. Jatuh kembali ke Offline Mode (LocalStorage)", error);
             }
         }
@@ -398,8 +485,8 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
             });
 
             let pesan = "Anda yakin ingin mengakhiri ujian ini?";
-            if (belumDijawab > 0) pesan = `<div class="p-3 bg-red-50 border border-red-200 rounded text-red-600 font-bold mb-2">Ada ${belumDijawab} soal yang belum dijawab!</div>Tetap kumpulkan?`;
-            else if (ragu > 0) pesan = `<div class="p-3 bg-amber-50 border border-amber-200 rounded text-amber-600 font-bold mb-2">Ada ${ragu} jawaban yang masih ragu-ragu!</div>Kumpulkan sekarang?`;
+            if (belumDijawab > 0) pesan = `<div class="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 font-bold mb-2 shadow-inner">Ada ${belumDijawab} soal yang belum dijawab!</div>Tetap kumpulkan?`;
+            else if (ragu > 0) pesan = `<div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-600 font-bold mb-2 shadow-inner">Ada ${ragu} jawaban yang masih ragu-ragu!</div>Kumpulkan sekarang?`;
 
             Swal.fire({
                 title: 'Selesai Ujian?',

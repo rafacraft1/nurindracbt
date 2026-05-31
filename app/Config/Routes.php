@@ -48,6 +48,7 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
 
         $routes->get('ruangan', 'RuanganController::index');
         $routes->post('ruangan/store', 'RuanganController::store');
+        $routes->post('ruangan/update/(:segment)', 'RuanganController::update/$1');
         $routes->post('ruangan/delete/(:num)', 'RuanganController::delete/$1');
         $routes->post('ruangan/plot-siswa', 'RuanganController::plotSiswa');
         $routes->post('ruangan/kosongkan/(:num)', 'RuanganController::kosongkan/$1');

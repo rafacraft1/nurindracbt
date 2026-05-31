@@ -22,7 +22,9 @@ class JadwalModel extends Model
         'status',
         'pengawas_id',
         'tahun_ajaran',
-        'semester'
+        'semester',
+        'acak_soal',     // Parameter baru
+        'tampil_nilai'   // Parameter baru
     ];
 
     public function getPaginatedJadwal(?string $search, string $sortCol, string $sortDir, int $perPage, int $offset, string $thnAktif, string $smtAktif): array

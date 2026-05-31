@@ -13,54 +13,74 @@
 <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 
-<div class="mb-6 flex justify-between items-center">
+<div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
     <div>
-        <h2 class="text-2xl font-bold text-slate-800">Form Input Soal Baru</h2>
-        <p class="text-slate-500 text-sm mt-1">Mata Pelajaran: <strong class="text-blue-600"><?= esc($mapel['nama_mapel']) ?></strong></p>
+        <h2 class="text-3xl font-bold text-slate-800 tracking-tight">Form Input Soal Baru</h2>
+        <p class="text-slate-500 text-sm mt-1">Mata Pelajaran: <strong class="text-blue-600 font-bold tracking-wide"><?= esc($mapel['nama_mapel']) ?></strong></p>
     </div>
-    <a href="/panel/bank-soal?mapel=<?= esc($mapel_id) ?>" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition">
+    <a href="/panel/bank-soal?mapel=<?= esc($mapel_id) ?>" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-xl font-bold text-sm transition shadow-sm flex items-center">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
         Kembali ke Daftar
     </a>
 </div>
 
-<form action="/panel/bank-soal/store" method="POST" enctype="multipart/form-data" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+<form action="/panel/bank-soal/store" method="POST" enctype="multipart/form-data" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
     <?= csrf_field() ?>
     <input type="hidden" name="mapel_id" value="<?= esc($mapel_id) ?>">
 
-    <div class="p-6 md:p-8 space-y-6">
+    <div class="p-6 md:p-8 space-y-8">
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-5 rounded-xl border border-slate-200">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-inner">
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Tipe Soal</label>
-                <select name="jenis_soal" id="jenisSoalSelect" onchange="toggleJenisSoal()" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700">
+                <select name="jenis_soal" id="jenisSoalSelect" onchange="toggleJenisSoal()" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700 shadow-sm cursor-pointer transition">
                     <option value="pg">Pilihan Ganda (PG)</option>
                     <option value="essai">Soal Essai</option>
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Upload Audio Listening (Opsional)</label>
-                <input type="file" name="file_audio" accept=".mp3, audio/mpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer outline-none">
-                <p class="text-[10px] mt-1 text-slate-500">Hanya format MP3. Maksimal ukuran 2MB.</p>
+                <label class="flex items-center text-sm font-semibold text-slate-700 mb-2">
+                    <svg class="w-4 h-4 mr-1.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                    </svg>
+                    Upload Audio Listening (Opsional)
+                </label>
+                <input type="file" name="file_audio" accept=".mp3, audio/mpeg" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer outline-none border border-slate-200 shadow-sm transition">
+                <p class="text-[11px] mt-2 text-slate-500 font-medium">Hanya format MP3. Maksimal ukuran 2MB.</p>
             </div>
         </div>
 
         <div>
-            <label class="inline-block text-base font-bold text-slate-800 mb-2 border-b-2 border-slate-800 pb-1">Pertanyaan Utama</label>
-            <p class="text-xs text-slate-500 mb-3">Anda bisa Paste (Ctrl+V) gambar dari Snipping Tool/Screenshot langsung ke dalam editor di bawah.</p>
-            <textarea name="pertanyaan" class="summernote" required></textarea>
+            <label class="inline-flex items-center text-lg font-bold text-slate-800 mb-1 border-b-2 border-slate-800 pb-1">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Pertanyaan Utama
+            </label>
+            <p class="text-[11px] text-slate-500 mb-3 font-medium">Anda bisa Paste (Ctrl+V) gambar dari Snipping Tool/Screenshot langsung ke dalam editor di bawah.</p>
+            <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                <textarea name="pertanyaan" class="summernote" required></textarea>
+            </div>
         </div>
 
         <div id="areaPG" class="space-y-4 pt-6 border-t border-slate-200">
-            <label class="inline-block text-base font-bold text-slate-800 border-b-2 border-blue-600 pb-1">Pilihan Jawaban</label>
-            <p class="text-xs text-slate-500 mb-2">Klik radio button di sebelah kiri abjad untuk menentukan <strong class="text-emerald-600">Kunci Jawaban</strong>.</p>
+            <label class="inline-flex items-center text-lg font-bold text-slate-800 border-b-2 border-blue-600 pb-1">
+                <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                </svg>
+                Pilihan Jawaban
+            </label>
+            <p class="text-[11px] text-slate-500 mb-4 font-medium">Klik radio button di sebelah kiri abjad untuk menentukan <strong class="text-emerald-600">Kunci Jawaban</strong>.</p>
 
             <?php foreach (['A', 'B', 'C', 'D', 'E'] as $index => $abjad): ?>
-                <div class="flex flex-col md:flex-row gap-4 items-start bg-white p-4 border border-slate-200 rounded-xl hover:border-blue-400 hover:shadow-md transition">
-                    <div class="flex md:flex-col items-center gap-3 mt-2">
-                        <span class="font-black text-2xl text-slate-400"><?= $abjad ?></span>
-                        <input type="radio" name="kunci_jawaban" value="<?= $abjad ?>" <?= $abjad == 'A' ? 'required' : '' ?> class="w-6 h-6 text-emerald-600 cursor-pointer border-slate-300 focus:ring-emerald-500 shadow-sm">
+                <div class="flex flex-col md:flex-row gap-5 items-start bg-slate-50/50 p-5 border border-slate-200 rounded-2xl hover:border-blue-400 hover:bg-white transition-all shadow-sm">
+                    <div class="flex md:flex-col items-center gap-3 mt-3">
+                        <span class="font-black text-3xl text-slate-300 drop-shadow-sm"><?= $abjad ?></span>
+                        <input type="radio" name="kunci_jawaban" value="<?= $abjad ?>" <?= $abjad == 'A' ? 'required' : '' ?> class="w-6 h-6 text-emerald-600 cursor-pointer border-slate-300 focus:ring-emerald-500 shadow-sm transition">
                     </div>
-                    <div class="flex-1 w-full">
+                    <div class="flex-1 w-full border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
                         <textarea name="opsi_<?= strtolower($abjad) ?>" class="summernote-opsi"></textarea>
                     </div>
                 </div>
@@ -68,16 +88,26 @@
         </div>
 
         <div id="areaEssai" class="hidden space-y-2 pt-6 border-t border-slate-200">
-            <label class="inline-block text-base font-bold text-slate-800 border-b-2 border-amber-600 pb-1">Kunci Jawaban Essai / Referensi Penilaian</label>
-            <p class="text-xs text-slate-500 mb-3">Informasi ini hanya akan dilihat oleh Guru Pengampu saat proses koreksi manual.</p>
-            <textarea name="kunci_essai" class="summernote-opsi"></textarea>
+            <label class="inline-flex items-center text-lg font-bold text-slate-800 border-b-2 border-amber-500 pb-1">
+                <svg class="w-5 h-5 mr-2 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Kunci Jawaban Essai / Referensi Penilaian
+            </label>
+            <p class="text-[11px] text-slate-500 mb-4 font-medium">Informasi ini hanya akan dilihat oleh Guru Pengampu saat proses koreksi manual.</p>
+            <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                <textarea name="kunci_essai" class="summernote-opsi"></textarea>
+            </div>
         </div>
     </div>
 
-    <div class="px-6 py-5 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <a href="/panel/bank-soal?mapel=<?= esc($mapel_id) ?>" class="px-6 py-2.5 border border-slate-300 bg-white rounded-lg text-slate-700 hover:bg-slate-50 font-medium transition">Batalkan</a>
-        <button type="submit" class="px-8 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-500/30 transition text-lg flex items-center">
-            💾 Simpan Soal
+    <div class="px-6 py-5 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 sticky bottom-0 z-10 shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
+        <a href="/panel/bank-soal?mapel=<?= esc($mapel_id) ?>" class="px-6 py-3 border border-slate-300 bg-white rounded-xl text-slate-700 hover:bg-slate-100 font-bold transition shadow-sm">Batalkan</a>
+        <button type="submit" class="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold shadow-lg shadow-blue-500/30 transition flex items-center justify-center transform hover:-translate-y-0.5">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+            </svg>
+            Simpan Soal Baru
         </button>
     </div>
 </form>
@@ -86,7 +116,6 @@
 
 <?= $this->section('scripts') ?>
 <script>
-    // Inisialisasi Token CSRF secara Dinamis untuk keamanan AJAX
     let csrfTokenName = '<?= csrf_token() ?>';
     let csrfHash = '<?= csrf_hash() ?>';
 
@@ -133,7 +162,7 @@
                 const canvas = document.createElement('canvas');
                 let width = image.width,
                     height = image.height,
-                    MAX = 800; // Resolusi aman 800px untuk layar dan file ringan
+                    MAX = 800;
 
                 if (width > MAX) {
                     height *= MAX / width;
@@ -144,13 +173,11 @@
                 canvas.height = height;
                 canvas.getContext('2d').drawImage(image, 0, 0, width, height);
 
-                // Ubah gambar menjadi Blob format WebP (kompresi tinggi tanpa pecah)
                 canvas.toBlob(function(blob) {
                     let formData = new window.FormData();
                     formData.append('gambar_soal', blob, 'img_' + Date.now() + '.webp');
-                    formData.append(csrfTokenName, csrfHash); // Proteksi CSRF
+                    formData.append(csrfTokenName, csrfHash);
 
-                    // Kirim ke server
                     $.ajax({
                         url: '/panel/bank-soal/upload-gambar',
                         method: 'POST',
@@ -159,10 +186,7 @@
                         contentType: false,
                         success: function(response) {
                             if (response.success) {
-                                // Tanamkan URL fisik gambar yang baru dari server ke editor
                                 editorElement.summernote('insertImage', response.url);
-
-                                // Perbarui Token CSRF untuk upload gambar berikutnya
                                 csrfHash = response.csrf;
                             } else {
                                 if (typeof showToast === 'function') showToast(response.message, "error");
@@ -174,7 +198,7 @@
                             else alert("Gagal terhubung ke server.");
                         }
                     });
-                }, 'image/webp', 0.8); // Kualitas 80%
+                }, 'image/webp', 0.8);
             }
             image.src = e.target.result;
         }

@@ -31,13 +31,11 @@ class UjianController extends BaseController
         $siswa = session()->get();
         $now   = date('Y-m-d H:i:s');
 
-        // Otomatis menutup ujian yang lewat waktu
         $this->jadwalModel->where('waktu_selesai <=', $now)
             ->whereIn('status', ['ready', 'active'])
             ->set(['status' => 'finished'])
             ->update();
 
-        // Ambil riwayat dengan join tabel jadwal agar tahu mapel_id nya
         $db = \Config\Database::connect();
         $riwayat = $db->table('hasil_ujian')
             ->select('hasil_ujian.*, jadwal_ujian.mapel_id')
@@ -54,13 +52,13 @@ class UjianController extends BaseController
         foreach ($riwayat as $r) {
             $statusUjian[$r['jadwal_id']] = $r['status'];
             $kehadiran[$r['jadwal_id']]   = $r['is_hadir'];
-            $jadwalPreInserted[]          = $r['jadwal_id']; // Didaftarkan khusus (Susulan)
+            $jadwalPreInserted[]          = $r['jadwal_id'];
 
             if ($r['status'] === 'progress') {
                 $jadwalProgress[] = $r['jadwal_id'];
             }
             if ($r['status'] === 'completed') {
-                $mapelSelesai[] = $r['mapel_id']; // Mapel yang sudah tuntas
+                $mapelSelesai[] = $r['mapel_id'];
             }
         }
 
@@ -71,8 +69,6 @@ class UjianController extends BaseController
             ->where('jadwal_ujian.tahun_ajaran', $this->tahunAktif)
             ->where('jadwal_ujian.semester', $this->smtAktif);
 
-        // Modifikasi Akses Ruangan: 
-        // Buka akses khusus bagi siswa target yang dipindah ke ruangan gabungan (Lab)
         if (!empty($jadwalPreInserted)) {
             $builder->groupStart()
                 ->groupStart()
@@ -97,27 +93,20 @@ class UjianController extends BaseController
 
         $rawJadwal = $builder->orderBy('jadwal_ujian.waktu_mulai', 'ASC')->findAll();
 
-        // FILTER CERDAS: Buang jadwal yang tidak berhak dilihat siswa
         $jadwalAktif = [];
         foreach ($rawJadwal as $j) {
             $isPreInserted = in_array($j['id'], $jadwalPreInserted);
 
-            // 1. Jika jadwal ini didaftarkan khusus (Susulan), wajib tampilkan ke target
             if ($isPreInserted) {
                 $jadwalAktif[] = $j;
                 continue;
             }
-
-            // 2. Jika siswa sudah menyelesaikan reguler, sembunyikan ujian susulan yg bocor
             if (in_array($j['mapel_id'], $mapelSelesai)) {
                 continue;
             }
-
-            // 3. Jika nama ujian eksplisit 'Susulan' tapi siswa ini bukan target, blokir total
             if (stripos($j['nama_ujian'], 'susulan') !== false) {
                 continue;
             }
-
             $jadwalAktif[] = $j;
         }
 
@@ -214,9 +203,11 @@ class UjianController extends BaseController
                 'jawaban_peserta' => $jawabanSiswa
             ]);
 
+            // FIX: Mengembalikan csrf_hash baru agar looping AJAX di view tidak terkena blokir 403
             return $this->response->setJSON([
-                'status'  => 'success',
-                'message' => 'Autosave berhasil'
+                'status'   => 'success',
+                'message'  => 'Autosave berhasil',
+                'csrfHash' => csrf_hash()
             ]);
         }
 
