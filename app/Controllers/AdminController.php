@@ -20,8 +20,8 @@ class AdminController extends BaseController
     private function checkAdmin(): void
     {
         if (session()->get('role') !== 'admin') {
-            header('Location: /panel/dashboard');
-            exit;
+            // Menggunakan Exception bawaan CI4 untuk menghentikan siklus secara aman jika bukan admin
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Akses Ditolak!');
         }
     }
 
@@ -81,6 +81,10 @@ class AdminController extends BaseController
         $this->checkAdmin();
         $staffLama = $this->staffModel->find($id);
 
+        if (!$staffLama) {
+            return redirect()->back()->with('error', 'Data staff tidak ditemukan.');
+        }
+
         if ($staffLama['username'] === 'admin') {
             $username  = 'admin';
             $role      = 'admin';
@@ -89,6 +93,15 @@ class AdminController extends BaseController
             $username  = (string)$this->request->getPost('username');
             $role      = (string)($this->request->getPost('role') ?? 'guru');
             $isPanitia = $this->request->getPost('is_panitia') ? 1 : 0;
+
+            // FIX BUG: Validasi duplikasi username (Mengecek semua baris data kecuali ID milik staff ini)
+            $usernameBentrok = $this->staffModel->where('username', $username)
+                ->where('id !=', $id)
+                ->countAllResults();
+
+            if ($usernameBentrok > 0) {
+                return redirect()->back()->with('error', "Gagal! Username '{$username}' sudah digunakan oleh staff lain.");
+            }
 
             if ($role === 'admin') {
                 if ($this->staffModel->where('role', 'admin')->where('id !=', $id)->countAllResults() >= 1) {
@@ -177,10 +190,8 @@ class AdminController extends BaseController
 
         $logoFile = $this->request->getFile('logo');
 
-        // Cek jika ada file yang diupload
         if ($logoFile && $logoFile->isValid() && !$logoFile->hasMoved()) {
 
-            // SECURITY PATCH: Validasi File di Sisi Server (Anti Webshell/RCE)
             $aturanValidasi = [
                 'logo' => [
                     'rules'  => 'is_image[logo]|mime_in[logo,image/png,image/jpg,image/jpeg]|max_size[logo,2048]',
@@ -196,14 +207,12 @@ class AdminController extends BaseController
                 return redirect()->back()->with('error', $this->validator->getError('logo'));
             }
 
-            // Hapus logo lama jika ada
             $pengaturanLama = $this->pengaturanModel->find(1);
             if ($pengaturanLama && !empty($pengaturanLama['logo'])) {
                 $oldPath = FCPATH . 'uploads/' . $pengaturanLama['logo'];
                 if (file_exists($oldPath)) unlink($oldPath);
             }
 
-            // Pindahkan logo baru
             $newName = $logoFile->getRandomName();
             $logoFile->move(FCPATH . 'uploads', $newName);
             $dataUpdate['logo'] = $newName;

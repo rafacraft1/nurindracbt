@@ -100,8 +100,9 @@ class PenilaianController extends BaseController
             ->orderBy('rombel', 'ASC')
             ->get()->getResultArray();
 
+        // REVISI: Menambahkan hasil_ujian.jawaban_peserta ke Select Query
         $builderSiswa = $db->table('siswa')
-            ->select('siswa.id, siswa.nisn, siswa.nama_lengkap, siswa.tingkat, siswa.jurusan, siswa.rombel, hasil_ujian.nilai_pg, hasil_ujian.nilai_essai, hasil_ujian.status, master_jenis_ujian.nama_ujian as keterangan_ujian, hasil_ujian.jadwal_id as actual_jadwal_id')
+            ->select('siswa.id, siswa.nisn, siswa.nama_lengkap, siswa.tingkat, siswa.jurusan, siswa.rombel, hasil_ujian.nilai_pg, hasil_ujian.nilai_essai, hasil_ujian.status, master_jenis_ujian.nama_ujian as keterangan_ujian, hasil_ujian.jadwal_id as actual_jadwal_id, hasil_ujian.jawaban_peserta')
             ->join('hasil_ujian', "hasil_ujian.siswa_id = siswa.id AND hasil_ujian.jadwal_id IN (" . implode(',', $arrJadwalIds) . ")", 'left')
             ->join('jadwal_ujian', 'jadwal_ujian.id = hasil_ujian.jadwal_id', 'left')
             ->join('master_jenis_ujian', 'master_jenis_ujian.id = jadwal_ujian.jenis_ujian_id', 'left')
@@ -114,10 +115,14 @@ class PenilaianController extends BaseController
 
         $siswa = $builderSiswa->orderBy('siswa.nama_lengkap', 'ASC')->get()->getResultArray();
 
+        // REVISI: Membawa data bank soal untuk referensi kunci dan ID soal di View
+        $bankSoal = $this->bankSoalModel->where('mapel_id', $jadwalRef['mapel_id'])->orderBy('id', 'ASC')->findAll();
+
         $data = [
             'title'        => 'Detail Nilai: ' . $jadwalRef['nama_mapel'],
             'jadwal'       => $jadwalRef,
             'siswa'        => $siswa,
+            'bankSoal'     => $bankSoal, // Disediakan untuk View
             'listRombel'   => $listRombel,
             'rombelFilter' => $rombelFilter
         ];
@@ -240,7 +245,6 @@ class PenilaianController extends BaseController
         $ruanganId    = $this->request->getPost('ruangan_id');
         $pengawasId   = $this->request->getPost('pengawas_id');
 
-        // FIX: Konversi Format DateTime-Local
         $waktuMulai   = date('Y-m-d H:i:s', strtotime((string)$this->request->getPost('waktu_mulai')));
         $waktuSelesai = date('Y-m-d H:i:s', strtotime((string)$this->request->getPost('waktu_selesai')));
 

@@ -24,7 +24,7 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
     <link rel="icon" type="image/png" href="<?= $urlLogo ?>">
 
     <link href="<?= base_url('css/app.css') ?>" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="<?= base_url('css/toastify.min.css') ?>">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>
 
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col select-none">
@@ -148,8 +148,8 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         <input type="hidden" name="payload_jawaban" id="payloadJawaban">
     </form>
 
-    <script src="<?= base_url('js/sweetalert2.min.js') ?>"></script>
-    <script src="<?= base_url('js/toastify.min.js') ?>"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
     <script>
         const JADWAL_ID = <?= $jadwal['id'] ?? 0 ?>;

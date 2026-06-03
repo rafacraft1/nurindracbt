@@ -22,7 +22,7 @@ class BackupController extends BaseController
         }
     }
 
-    public function index(): string
+    public function index(): ResponseInterface|string
     {
         $this->checkAdmin();
         $data = [
@@ -54,9 +54,10 @@ class BackupController extends BaseController
         }
 
         try {
-            // Proses berpotensi memakan waktu, berikan waktu tambahan ke server
             set_time_limit(0);
-            ini_set('memory_limit', '512M');
+            if (function_exists('ini_set')) {
+                @ini_set('memory_limit', '1024M');
+            }
 
             $this->backupService->restoreBackup($file);
 
@@ -66,65 +67,91 @@ class BackupController extends BaseController
         }
     }
 
-    public function factoryReset(): \CodeIgniter\HTTP\ResponseInterface
+    /**
+     * ENGINE RESET PABRIK MURNI (Wipe Folder, Migrate Regress, Migrate Up, Seed)
+     */
+    public function factoryReset(): ResponseInterface
     {
-        // Pastikan hanya admin utama yang bisa melakukan ini
-        if (session()->get('username') !== 'admin') {
-            return redirect()->back()->with('error', 'Akses Ditolak! Hanya Super Admin utama yang dapat melakukan Factory Reset.');
+        if (session()->get('role') !== 'admin') {
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => 'Akses Ditolak! Hanya Super Admin utama.'
+            ]);
         }
 
-        $db = \Config\Database::connect();
-
-        $db->transStart();
-        $db->query('SET FOREIGN_KEY_CHECKS = 0');
-
-        // 1. Kosongkan tabel transaksional & master
-        $tabelDikosongkan = [
-            'siswa',
-            'hasil_ujian',
-            'bank_soal',
-            'jadwal_ujian',
-            'ruangan',
-            'master_mapel',
-            'master_jenis_ujian',
-            'guru_mapel'
-        ];
-
-        foreach ($tabelDikosongkan as $tabel) {
-            $db->table($tabel)->truncate();
+        $konfirmasi = $this->request->getPost('konfirmasi_reset');
+        if ($konfirmasi !== 'HAPUS PERMANEN') {
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => 'Validasi gagal! Kata sandi ketikan tidak sesuai.'
+            ]);
         }
 
-        // 2. Hapus semua staff KECUALI admin utama
-        $db->table('staff')->where('username !=', 'admin')->delete();
+        try {
+            // =======================================================
+            // TAHAP 1: MEMBABAT HABIS FILE MEDIA DI FOLDER
+            // =======================================================
+            $folderDibersihkan = [
+                FCPATH . 'uploads/',         // Sapu logo lama
+                FCPATH . 'uploads/soal/',    // Sapu gambar soal
+                FCPATH . 'uploads/audio/',   // Sapu audio listening
+                FCPATH . 'data_soal/',       // Sapu file JSON jadwal/soal
+                FCPATH . 'data_ruangan/',    // Sapu cache ruangan
+                WRITEPATH . 'uploads/'       // Sapu temp file CI4
+            ];
 
-        $db->query('SET FOREIGN_KEY_CHECKS = 1');
-        $db->transComplete();
+            // Melindungi file pondasi agar folder tidak terekspos / error
+            $skipFiles = ['.', '..', 'index.html', '.htaccess'];
 
-        if ($db->transStatus() === false) {
-            return redirect()->back()->with('error', 'Gagal mereset database. Proses dibatalkan otomatis.');
-        }
-
-        // 3. Bersihkan Folder File Dinamis
-        $folderDibersihkan = [
-            FCPATH . 'uploads/soal/',
-            FCPATH . 'uploads/audio/',
-            FCPATH . 'data_soal/',
-            FCPATH . 'data_ruangan/',
-            WRITEPATH . 'uploads/'
-        ];
-
-        foreach ($folderDibersihkan as $folder) {
-            if (is_dir($folder)) {
-                $files = array_diff(scandir($folder), ['.', '..', 'index.html']);
-                foreach ($files as $file) {
-                    $filePath = $folder . $file;
-                    if (is_file($filePath)) {
-                        unlink($filePath);
+            foreach ($folderDibersihkan as $folder) {
+                if (is_dir($folder)) {
+                    $files = scandir($folder);
+                    foreach ($files as $file) {
+                        if (!in_array($file, $skipFiles)) {
+                            $filePath = $folder . $file;
+                            if (is_file($filePath)) {
+                                @unlink($filePath);
+                            }
+                        }
                     }
                 }
             }
-        }
 
-        return redirect()->back()->with('success', 'Sistem berhasil dikembalikan ke Setelan Pabrik. Semua data bersih!');
+            // =======================================================
+            // TAHAP 2: BONGKAR & BANGUN ULANG DATABASE
+            // =======================================================
+            $db = \Config\Database::connect();
+
+            // Matikan Foreign Key Checks agar Regress (Drop Table) berjalan lancar tanpa error relasi
+            $db->query('SET FOREIGN_KEY_CHECKS = 0');
+
+            // 1. Memanggil layanan Migration bawaan CI4
+            $migrate = \Config\Services::migrations();
+            $migrate->setSilent(true);
+
+            // 2. Rollback Total (Menjalankan fungsi down() di CbtSystem.php untuk DROP semua tabel)
+            $migrate->regress(0);
+
+            // 3. Bangun Ulang (Menjalankan fungsi up() di CbtSystem.php untuk CREATE tabel fresh)
+            $migrate->latest();
+
+            // 4. Suntikkan Data Pabrik (Menjalankan ProdSeeder.php)
+            $seeder = \Config\Database::seeder();
+            $seeder->call('ProdSeeder');
+
+            // Nyalakan kembali penjaga integritas relasi Database
+            $db->query('SET FOREIGN_KEY_CHECKS = 1');
+
+            return $this->response->setJSON([
+                'status'  => 'success',
+                'message' => 'Sistem berhasil direset ke standar awal pabrik.'
+            ]);
+        } catch (\Throwable $e) {
+            // Tangkap dan kembalikan pesan jika terjadi error server tingkat rendah
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => 'Terjadi kesalahan sistem saat me-reset: ' . $e->getMessage()
+            ]);
+        }
     }
 }

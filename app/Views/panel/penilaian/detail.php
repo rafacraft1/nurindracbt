@@ -4,6 +4,7 @@
  * @var array $jadwal
  * @var array $siswa
  * @var array $listRombel
+ * @var array $bankSoal
  * @var string|null $rombelFilter
  */
 ?>
@@ -70,11 +71,10 @@
                     <th class="px-6 py-4 text-center w-16">No</th>
                     <th class="px-6 py-4 w-32">NISN</th>
                     <th class="px-6 py-4">Nama Siswa & Kelas</th>
-                    <th class="px-6 py-4 text-center">Status</th>
                     <th class="px-6 py-4 text-center w-24">Nilai PG</th>
                     <th class="px-6 py-4 text-center w-24">Nilai Essai</th>
                     <th class="px-6 py-4 text-center w-24">Nilai Akhir</th>
-                    <th class="px-6 py-4 text-center w-36">Aksi</th>
+                    <th class="px-6 py-4 text-center">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -89,8 +89,24 @@
                         <td class="px-6 py-4 font-mono text-xs font-bold text-slate-500"><?= esc($s['nisn']) ?></td>
 
                         <td class="px-6 py-4">
-                            <div class="font-black text-slate-800 uppercase tracking-wide"><?= esc($s['nama_lengkap']) ?></div>
-                            <div class="flex items-center gap-2 mt-1">
+                            <div class="flex items-center gap-2">
+                                <div class="font-black text-slate-800 uppercase tracking-wide"><?= esc($s['nama_lengkap']) ?></div>
+                                <?php if ($s['status'] == 'completed'): ?>
+                                    <svg title="Selesai Mengerjakan" class="w-5 h-5 text-emerald-500 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                <?php elseif ($s['status'] == 'progress'): ?>
+                                    <svg title="Sedang Mengerjakan" class="w-5 h-5 text-amber-500 drop-shadow-sm animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                <?php else: ?>
+                                    <svg title="Belum Masuk" class="w-5 h-5 text-red-500 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="flex flex-col items-start gap-1 mt-1">
                                 <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded border border-slate-200">
                                     <?= esc($s['tingkat'] . ' ' . $s['jurusan'] . ' ' . $s['rombel']) ?>
                                 </span>
@@ -105,16 +121,6 @@
                             </div>
                         </td>
 
-                        <td class="px-6 py-4 text-center">
-                            <?php if ($s['status'] == 'completed'): ?>
-                                <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm">Selesai</span>
-                            <?php elseif ($s['status'] == 'progress'): ?>
-                                <span class="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm animate-pulse">Ujian Aktif</span>
-                            <?php else: ?>
-                                <span class="bg-slate-50 text-slate-500 border border-slate-200 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">Belum Masuk</span>
-                            <?php endif; ?>
-                        </td>
-
                         <td class="px-6 py-4 text-center font-black text-blue-600 text-base"><?= number_format($pg, 1) ?></td>
                         <td class="px-6 py-4 text-center font-black text-indigo-600 text-base"><?= number_format($essai, 1) ?></td>
 
@@ -125,28 +131,74 @@
                         </td>
 
                         <td class="px-6 py-4 text-center">
-                            <?php if ($s['status'] == 'completed' && !empty($s['actual_jadwal_id'])):
-                                $urlKoreksi = "/panel/penilaian/koreksi/{$s['actual_jadwal_id']}/{$s['id']}";
-                                if (!empty($rombelFilter)) {
-                                    $urlKoreksi .= "?rombel=" . urlencode($rombelFilter);
-                                }
-                            ?>
-                                <a href="<?= $urlKoreksi ?>" class="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition shadow-sm transform hover:-translate-y-0.5">
-                                    <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                                    </svg>
-                                    Koreksi
-                                </a>
-                            <?php else: ?>
-                                <span class="text-[10px] text-slate-300 font-bold uppercase tracking-wide">-- Menunggu --</span>
-                            <?php endif; ?>
+                            <div class="flex items-center justify-center gap-2">
+
+                                <?php if (($s['status'] == 'completed' || $s['status'] == 'progress') && !empty($s['jawaban_peserta'])): ?>
+                                    <button type="button" onclick="bukaModalPG('<?= $s['id'] ?>', '<?= esc($s['nama_lengkap'], 'js') ?>')" class="inline-flex items-center justify-center px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold transition shadow-sm transform hover:-translate-y-0.5">
+                                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                        </svg>
+                                        Detail
+                                    </button>
+
+                                    <div id="data-pg-<?= $s['id'] ?>" class="hidden">
+                                        <?php
+                                        $jawabanDecode = json_decode((string)$s['jawaban_peserta'], true) ?? [];
+                                        $noPg = 1;
+                                        ?>
+                                        <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                                            <?php foreach ($bankSoal as $soal): ?>
+                                                <?php if ($soal['jenis_soal'] === 'pg'):
+                                                    $jawabSiswa = $jawabanDecode[$soal['id']]['jawab'] ?? '';
+                                                    $kunciAsli  = $soal['kunci_jawaban'] ?? '';
+                                                    $isBenar    = (strtolower((string)$jawabSiswa) === strtolower((string)$kunciAsli));
+
+                                                    if (empty($jawabSiswa)) {
+                                                        $colorClass = 'bg-slate-100 text-slate-400 border-slate-200';
+                                                        $huruf      = '-';
+                                                    } else {
+                                                        $colorClass = $isBenar ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm' : 'bg-red-50 text-red-700 border-red-300 shadow-sm';
+                                                        $huruf      = strtoupper($jawabSiswa);
+                                                    }
+                                                ?>
+                                                    <div class="flex flex-col items-center justify-center p-2 rounded-xl border <?= $colorClass ?>">
+                                                        <span class="text-[10px] font-bold opacity-70 mb-0.5">No. <?= $noPg ?></span>
+                                                        <span class="text-xl font-black mb-0.5"><?= $huruf ?></span>
+                                                        <span class="text-[9px] font-bold uppercase tracking-wider">Kunci: <?= strtoupper($kunciAsli) ?></span>
+                                                    </div>
+                                                    <?php $noPg++; ?>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if ($s['status'] == 'completed' && !empty($s['actual_jadwal_id'])):
+                                    $urlKoreksi = "/panel/penilaian/koreksi/{$s['actual_jadwal_id']}/{$s['id']}";
+                                    if (!empty($rombelFilter)) {
+                                        $urlKoreksi .= "?rombel=" . urlencode($rombelFilter);
+                                    }
+                                ?>
+                                    <a href="<?= $urlKoreksi ?>" class="inline-flex items-center justify-center px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-bold transition shadow-sm transform hover:-translate-y-0.5">
+                                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                        </svg>
+                                        Koreksi
+                                    </a>
+                                <?php else: ?>
+                                    <?php if (empty($s['jawaban_peserta'])): ?>
+                                        <span class="text-[10px] text-slate-300 font-bold uppercase tracking-wide">-- Menunggu --</span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
 
                 <?php if (empty($siswa)): ?>
                     <tr>
-                        <td colspan="8" class="px-6 py-12 text-center text-slate-500 bg-slate-50">
+                        <td colspan="7" class="px-6 py-12 text-center text-slate-500 bg-slate-50">
                             <svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                             </svg>
@@ -158,5 +210,66 @@
         </table>
     </div>
 </div>
+
+<div id="modalPG" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-opacity opacity-0">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="modalPGContent">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <div>
+                <h3 class="font-bold text-slate-800 text-lg">Detail Jawaban Ganda</h3>
+                <p class="text-xs text-slate-500 font-medium">Siswa: <span id="modalNamaSiswa" class="font-bold text-blue-600 uppercase tracking-wide"></span></p>
+            </div>
+            <button type="button" onclick="tutupModalPG()" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 bg-slate-50/50">
+            <div id="modalGridPG" class="max-h-[60vh] overflow-y-auto p-1"></div>
+        </div>
+        <div class="px-6 py-4 border-t border-slate-200 bg-white flex justify-end">
+            <button type="button" onclick="tutupModalPG()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-slate-300">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function bukaModalPG(siswaId, namaSiswa) {
+        const modal = document.getElementById('modalPG');
+        const content = document.getElementById('modalPGContent');
+        const hiddenData = document.getElementById('data-pg-' + siswaId);
+
+        // Memasukkan nama dan mereplika HTML grid ke dalam modal
+        document.getElementById('modalNamaSiswa').innerText = namaSiswa;
+        document.getElementById('modalGridPG').innerHTML = hiddenData ? hiddenData.innerHTML : '<p class="text-center text-slate-500">Data tidak tersedia.</p>';
+
+        // Atasi CSS conflict hidden vs flex
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        // Timeout kecil untuk memicu transisi (animasi Pop-up CSS)
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            content.classList.remove('scale-95');
+        }, 10);
+    }
+
+    function tutupModalPG() {
+        const modal = document.getElementById('modalPG');
+        const content = document.getElementById('modalPGContent');
+
+        modal.classList.add('opacity-0');
+        content.classList.add('scale-95');
+
+        // Menunggu animasi selesai sebelum benar-benar di-hidden dan menghapus flex
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('modalGridPG').innerHTML = '';
+        }, 300);
+    }
+</script>
 
 <?= $this->endSection() ?>
