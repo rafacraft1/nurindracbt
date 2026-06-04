@@ -170,7 +170,11 @@ if ($zonaWaktu === 'Asia/Jayapura') $labelZona = 'WIT';
         </header>
 
         <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8 relative">
+
             <?= $this->renderSection('content') ?>
+
+            <div class="h-24 w-full pointer-events-none"></div>
+
         </main>
     </div>
 
