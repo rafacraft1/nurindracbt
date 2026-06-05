@@ -37,6 +37,7 @@ class UjianService
 
         return false;
     }
+
     /**
      * Memvalidasi kebenaran Token Ujian
      */
@@ -46,7 +47,12 @@ class UjianService
         if (!file_exists($jsonPath)) return false;
 
         $tokenData = json_decode((string)file_get_contents($jsonPath), true);
-        return strtoupper($tokenInput) === ($tokenData['token'] ?? '');
+        $serverToken = $tokenData['token'] ?? '';
+
+        // LOGIKA BYPASS: Jika pengawas membebaskan token
+        if ($serverToken === 'FREE') return true;
+
+        return strtoupper($tokenInput) === $serverToken;
     }
 
     /**
@@ -67,6 +73,22 @@ class UjianService
     }
 
     /**
+     * Fitur Bebaskan Token (Tanpa Token)
+     */
+    public function bebaskanToken(string $jadwalId): array
+    {
+        $jsonContent = json_encode([
+            'token'      => 'FREE',
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+
+        $filePath = FCPATH . 'data_ruangan/token_' . $jadwalId . '.json';
+        $success  = file_put_contents($filePath, $jsonContent) !== false;
+
+        return ['success' => $success, 'token' => 'FREE'];
+    }
+
+    /**
      * Mengambil informasi Token untuk ditampilkan di panel Pengawas
      */
     public function getTokenData(string $jadwalId): array
@@ -75,6 +97,15 @@ class UjianService
         if (file_exists($jsonPath)) {
             $tokenData = json_decode((string)file_get_contents($jsonPath), true);
             if (isset($tokenData['updated_at'])) {
+
+                // Deteksi status Bebas Token
+                if (($tokenData['token'] ?? '') === 'FREE') {
+                    return [
+                        'token'      => 'BEBAS TOKEN',
+                        'sisa_waktu' => 9999
+                    ];
+                }
+
                 $elapsed = time() - strtotime((string)$tokenData['updated_at']);
                 $sisaWaktuDetik = max(0, 900 - $elapsed);
 

@@ -132,10 +132,10 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                                 <?php if ($j['status'] === 'active'): ?>
 
                                     <?php if ($isHadir == 1): ?>
-                                        <form action="/ujian/mulai" method="POST" class="flex gap-2">
+                                        <form action="/ujian/mulai" method="POST" class="flex flex-col sm:flex-row gap-2">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="jadwal_id" value="<?= $j['id'] ?>">
-                                            <input type="text" name="token" placeholder="INPUT TOKEN PENGAWAS" required autocomplete="off" class="flex-1 px-4 py-3 bg-slate-50 border-2 border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-mono font-bold text-center tracking-widest uppercase text-emerald-800 placeholder:font-sans placeholder:tracking-normal placeholder:font-normal placeholder:text-sm transition">
+                                            <input type="text" name="token" placeholder="TOKEN (KOSONGKAN JIKA BEBAS)" autocomplete="off" class="flex-1 px-4 py-3 bg-slate-50 border-2 border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-mono font-bold text-center tracking-widest uppercase text-emerald-800 placeholder:font-sans placeholder:tracking-normal placeholder:font-normal placeholder:text-sm transition">
                                             <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-emerald-500/30 transition text-sm whitespace-nowrap">
                                                 MULAI
                                             </button>

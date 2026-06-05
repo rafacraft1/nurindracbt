@@ -17,9 +17,10 @@ $sekarangTs      = time();
 $isBelumMulai = $sekarangTs < $waktuMulaiTs;
 $isSelesai    = $sekarangTs > $waktuSelesaiTs;
 
-// FIX LINTER TAILWIND: Deklarasi kelas CSS secara dinamis di level PHP agar linter tidak mendeteksi konflik
+// FIX LINTER TAILWIND: Deklarasi kelas CSS secara dinamis di level PHP
 $bgMonitorClass = $isBelumMulai ? 'bg-slate-100 border-slate-300' : ($isSelesai ? 'bg-red-900 border-red-700' : 'bg-slate-900 border-slate-700');
 $btnRilisClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 cursor-not-allowed border-slate-300' : 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/30';
+$btnBebasClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 cursor-not-allowed border-slate-300' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-600/30';
 
 ?>
 <?= $this->extend('layouts/panel') ?>
@@ -88,7 +89,7 @@ $btnRilisClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 c
             <p class="text-blue-400 text-xs font-bold uppercase tracking-widest mb-2 z-10 flex items-center">
                 <span class="w-2 h-2 rounded-full bg-blue-500 mr-2 animate-pulse"></span> Token Ujian Aktif
             </p>
-            <h1 id="displayTokenBesar" class="text-6xl md:text-7xl font-black text-white tracking-[0.25em] z-10 drop-shadow-[0_0_20px_rgba(59,130,246,0.6)] mt-2">
+            <h1 id="displayTokenBesar" class="text-5xl md:text-7xl font-black text-white tracking-[0.25em] z-10 drop-shadow-[0_0_20px_rgba(59,130,246,0.6)] mt-2">
                 <?= $token ?>
             </h1>
             <p class="text-slate-400 text-xs mt-4 z-10 text-center font-medium">Siswa wajib memasukkan token ini saat masuk. Token berganti otomatis.</p>
@@ -98,12 +99,20 @@ $btnRilisClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 c
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-center">
         <h3 class="font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Kontrol Token</h3>
 
-        <button type="button" id="btnRilisManual" onclick="konfirmasiTokenManual()" <?= ($isBelumMulai || $isSelesai) ? 'disabled' : '' ?> class="w-full <?= $btnRilisClass ?> font-bold py-3.5 rounded-xl text-sm transition mb-5 flex items-center justify-center transform hover:-translate-y-0.5 border">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-            <?= $isBelumMulai ? 'Belum Waktunya' : ($isSelesai ? 'Jadwal Ditutup' : 'Rilis Token Sekarang') ?>
-        </button>
+        <div class="flex flex-col sm:flex-row gap-2 mb-5">
+            <button type="button" id="btnRilisManual" onclick="konfirmasiTokenManual()" <?= ($isBelumMulai || $isSelesai) ? 'disabled' : '' ?> class="w-full sm:w-1/2 <?= $btnRilisClass ?> font-bold py-3 rounded-xl text-xs transition flex flex-col items-center justify-center transform hover:-translate-y-0.5 border">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Rilis Acak
+            </button>
+            <button type="button" onclick="konfirmasiBebasToken()" <?= ($isBelumMulai || $isSelesai) ? 'disabled' : '' ?> class="w-full sm:w-1/2 <?= $btnBebasClass ?> font-bold py-3 rounded-xl text-xs transition flex flex-col items-center justify-center transform hover:-translate-y-0.5 border">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                </svg>
+                Bebas Token
+            </button>
+        </div>
 
         <div class="bg-blue-50 border border-blue-100 p-5 rounded-xl text-center shadow-inner relative overflow-hidden">
             <div class="absolute inset-0 bg-blue-600/5 -skew-y-12 transform origin-top-left"></div>
@@ -451,6 +460,72 @@ $btnRilisClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 c
         });
     }
 
+    // FUNGSI BARU: AJAX BEBAS TOKEN
+    function konfirmasiBebasToken() {
+        if (isBelumMulai) {
+            Swal.fire('Belum Waktunya!', 'Tunggu hingga jam ujian dimulai untuk membebaskan token.', 'info');
+            return;
+        }
+
+        Swal.fire({
+            title: 'Bebaskan Token?',
+            text: "Siswa dapat masuk tanpa perlu memasukkan token ujian. Lanjutkan?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#9333ea',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Bebaskan!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                requestBebasToken();
+            }
+        });
+    }
+
+    function requestBebasToken() {
+        let formData = new window.FormData();
+        formData.append('<?= csrf_token() ?>', csrfToken);
+
+        document.getElementById('displayTokenBesar').innerText = "⏳...";
+
+        fetch(`/panel/ruang-pengawas/bebaskan-token-ajax/<?= $jadwal['id_gabungan'] ?>`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                csrfToken = data.csrfHash;
+                document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfToken);
+
+                if (data.success) {
+                    document.getElementById('displayTokenBesar').innerText = data.token;
+
+                    // Matikan hitung mundur jika sedang berjalan
+                    clearInterval(timerTokenInterval);
+                    document.getElementById('countdownToken').innerText = "BEBAS";
+
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'Token berhasil dibebaskan!',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                } else {
+                    document.getElementById('displayTokenBesar').innerText = "ERROR";
+                    Swal.fire('Gagal', data.message, 'error');
+                }
+            })
+            .catch(() => {
+                document.getElementById('displayTokenBesar').innerText = "TIMEOUT";
+                Swal.fire('Koneksi Terputus', 'Gagal menyambung ke server.', 'error');
+            });
+    }
+
     document.getElementById('cariSiswa').addEventListener('input', function(e) {
         let keyword = e.target.value.toLowerCase();
         let rows = document.querySelectorAll('.row-siswa');
@@ -467,7 +542,9 @@ $btnRilisClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 c
 
     window.onload = () => {
         if (!isBelumMulai && !isSelesai) {
-            if ('<?= $token ?>' !== 'BELUM ADA') {
+            if ('<?= $token ?>' === 'BEBAS TOKEN') {
+                document.getElementById('countdownToken').innerText = "BEBAS";
+            } else if ('<?= $token ?>' !== 'BELUM ADA') {
                 if (tokenCountdown <= 0) requestNewToken('auto');
                 else startTokenTimer();
             } else {

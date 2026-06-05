@@ -94,6 +94,7 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
         $routes->post('reset-login/(:num)', 'PengawasController::resetLogin/$1');
         $routes->post('force-selesai/(:num)/(:num)', 'PengawasController::forceSelesai/$1/$2');
         $routes->post('tandai-hadir/(:num)/(:num)', 'PengawasController::tandaiHadir/$1/$2');
+        $routes->post('bebaskan-token-ajax/(:any)', 'PengawasController::bebaskanTokenAjax/$1');
     });
 
     $routes->group('penilaian', ['filter' => 'auth:guru'], function ($routes) {

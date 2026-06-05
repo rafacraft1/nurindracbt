@@ -134,7 +134,6 @@ class PengawasController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Akses Ilegal! Anda tidak berhak mengontrol jadwal ini.']);
         }
 
-        // SECURITY PATCH: TIME-LOCK VALIDATION
         $jadwalUtama = $this->jadwalModel->find($firstId);
         $sekarang    = time();
         $mulai       = strtotime((string)$jadwalUtama['waktu_mulai']);
@@ -157,7 +156,8 @@ class PengawasController extends BaseController
         $result = $this->ujianService->generateTokenBaru($firstId);
 
         if ($result['success']) {
-            $tokenFile = FCPATH . 'data_soal/token_' . $firstId . '.json';
+            // FIX BUG PATH: Sebelumnya data_soal/, seharusnya data_ruangan/
+            $tokenFile = FCPATH . 'data_ruangan/token_' . $firstId . '.json';
             $tokenContent = file_exists($tokenFile) ? file_get_contents($tokenFile) : null;
 
             foreach ($ids as $id) {
@@ -166,7 +166,7 @@ class PengawasController extends BaseController
                     $this->jadwalModel->update($id, ['status' => 'active']);
                 }
                 if ($id != $firstId && $tokenContent) {
-                    file_put_contents(FCPATH . 'data_soal/token_' . $id . '.json', $tokenContent);
+                    file_put_contents(FCPATH . 'data_ruangan/token_' . $id . '.json', $tokenContent);
                 }
             }
 
@@ -178,6 +178,54 @@ class PengawasController extends BaseController
         }
 
         return $this->response->setJSON(['success' => false, 'message' => 'Gagal menulis file token di server!']);
+    }
+
+    // FUNGSI BARU: AJAX Bebaskan Token
+    public function bebaskanTokenAjax(string $jadwalIdGabungan): ResponseInterface
+    {
+        $ids = explode('-', $jadwalIdGabungan);
+        $firstId = $ids[0];
+
+        if (!$this->verifyPengawasAccess($firstId)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Akses Ilegal!']);
+        }
+
+        $jadwalUtama = $this->jadwalModel->find($firstId);
+        $sekarang    = time();
+        $mulai       = strtotime((string)$jadwalUtama['waktu_mulai']);
+        $selesai     = strtotime((string)$jadwalUtama['waktu_selesai']);
+
+        if ($sekarang < $mulai) {
+            return $this->response->setJSON(['success' => false, 'message' => 'BELUM WAKTUNYA!']);
+        }
+        if ($sekarang > $selesai) {
+            return $this->response->setJSON(['success' => false, 'message' => 'WAKTU HABIS!']);
+        }
+
+        $result = $this->ujianService->bebaskanToken($firstId);
+
+        if ($result['success']) {
+            $tokenFile = FCPATH . 'data_ruangan/token_' . $firstId . '.json';
+            $tokenContent = file_exists($tokenFile) ? file_get_contents($tokenFile) : null;
+
+            foreach ($ids as $id) {
+                $jadwal = $this->jadwalModel->find($id);
+                if ($jadwal['status'] === 'ready' && $sekarang >= $mulai && $sekarang <= $selesai) {
+                    $this->jadwalModel->update($id, ['status' => 'active']);
+                }
+                if ($id != $firstId && $tokenContent) {
+                    file_put_contents(FCPATH . 'data_ruangan/token_' . $id . '.json', $tokenContent);
+                }
+            }
+
+            return $this->response->setJSON([
+                'success'  => true,
+                'token'    => 'BEBAS TOKEN',
+                'csrfHash' => csrf_hash()
+            ]);
+        }
+
+        return $this->response->setJSON(['success' => false, 'message' => 'Gagal membypass token di server!']);
     }
 
     public function resetLogin(string $siswaId): ResponseInterface
