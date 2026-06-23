@@ -47,3 +47,11 @@ Unduh atau *clone* repositori ini ke dalam server Anda:
 ```bash
 git clone [https://github.com/username-anda/nurindracbt.git](https://github.com/username-anda/nurindracbt.git)
 cd nurindracbt
+
+### Langkah 2: Clone Repositori
+
+Jalankan perintah berikut untuk mengunduh pustaka:
+
+```bash
+composer install --no-dev --optimize-autoloader
+
