@@ -1,6 +1,6 @@
 # 🎓 CBT PRO - ENTERPRISE EDITION
 
-**Versi 1.0.0** | **© 2026 Nurindra CBT PRO**
+**Versi 2.0.0** | **© 2026 Nurindra CBT PRO**
 
 ![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue)
 ![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EE4323?logo=codeigniter&logoColor=white)
@@ -62,21 +62,65 @@ composer install --no-dev --optimize-autoloader
 
 1. Salin file env bawaan menjadi .env:
 
-```bash
-cp env .env
-```
+    ```bash
+    cp env .env
+    ```
 
 2. Buka dan edit file .env. Sesuaikan parameter berikut:
 
-```text
-CI_ENVIRONMENT = production
+    ```text
+    CI_ENVIRONMENT = production
 
-   app.baseURL = '[https://ujian.sekolahanda.com/](https://ujian.sekolahanda.com/)'
-   app.forceGlobalSecureRequests = true # Ubah ke true jika memakai HTTPS/SSL
+    app.baseURL = 'https://ujian.sekolahanda.com/'
+    app.forceGlobalSecureRequests = true # Ubah ke true jika memakai HTTPS/SSL
 
-   database.default.hostname = localhost
-   database.default.database = nama_database_anda
-   database.default.username = user_database_anda
-   database.default.password = password_database_anda
-   database.default.DBDriver = MySQLi
+    database.default.hostname = localhost
+    database.default.database = nama_database_anda
+    database.default.username = user_database_anda
+    database.default.password = password_database_anda
+    database.default.DBDriver = MySQLi
+    ```
+
+### Langkah 4: Set Permission Folder
+
+Folder writable/ dan public/uploads/ wajib memiliki akses tulis:
+
+```bash
+chmod -R 775 writable/
+chmod -R 775 public/uploads/
 ```
+
+### Langkah 5: Migrasi Database & Seeding Awal
+
+Bangun struktur database dan isi data bawaan:
+
+```bash
+php spark migrate
+php spark db:seed ProdSeeder
+```
+
+### Langkah 6: Migrasi Database & Seeding Awal
+
+Konfigurasi Web Server (Document Root)
+
+Arahkan Document Root pada pengaturan web server/domain Anda ke dalam folder public/. (Contoh: /var/www/nurindracbt/public atau /home/user/public_html/cbt/public).
+
+## 🔑 Akses Login Default
+
+Setelah instalasi berhasil, Anda dapat login menggunakan kredensial bawaan:
+
+* Role: Super Administrator
+* Username: admin
+* Password: admin123
+
+(Sangat disarankan untuk segera mengubah password administrator melalui menu Manajemen Staff setelah instalasi berhasil).
+
+## 👨‍💻 Pengembang & Dukungan
+
+Dikembangkan dengan dedikasi penuh oleh Nurindra.
+
+Jika Anda membutuhkan bantuan instalasi, pelaporan bug, atau ingin mendiskusikan kustomisasi fitur tambahan, silakan hubungi melalui saluran berikut:
+
+* 📧 Email: <nurindra.id@gmail.com>
+* 💬 WhatsApp: +62 812-2032-9780
+* 📺 YouTube: Nurindra ID
