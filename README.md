@@ -64,7 +64,7 @@ composer install --no-dev --optimize-autoloader
 
 ```bash
 cp env .env
-``
+```
 
 2. Buka dan edit file .env. Sesuaikan parameter berikut:
 
