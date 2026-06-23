@@ -124,3 +124,14 @@ Jika Anda membutuhkan bantuan instalasi, pelaporan bug, atau ingin mendiskusikan
 * 📧 Email: <nurindra.id@gmail.com>
 * 💬 WhatsApp: +62 812-2032-9780
 * 📺 YouTube: Nurindra ID
+
+## ⚖️ Hak Cipta & Peringatan
+
+Kode sumber ini dilindungi oleh kekayaan intelektual.
+
+Walaupun aplikasi ini gratis untuk digunakan dan dibagikan, DILARANG KERAS melakukan tindakan berikut tanpa izin tertulis dari pihak pengembang:
+
+* Memodifikasi (re-branding / mengubah nama pembuat) untuk diklaim sebagai milik pribadi.
+* Menjual ulang (re-sell) bagian manapun dari aplikasi ini.
+
+Dibuat dengan ❤️ oleh Nurindra.
