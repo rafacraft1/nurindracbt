@@ -2,40 +2,48 @@
 
 **Versi 1.0.0** | **© 2026 Nurindra CBT PRO**
 
----
-
-## 📖 Tentang Aplikasi
+![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-blue)
+![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.x-EE4323?logo=codeigniter&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?logo=tailwind-css&logoColor=white)
+![License](https://img.shields.io/badge/License-Freeware-green)
 
 **CBT PRO** adalah platform Ujian Berbasis Komputer (*Computer Based Test*) berskala Enterprise yang dirancang untuk performa tinggi, keamanan absolut, dan manajemen akademik terintegrasi untuk institusi modern.
 
-> 📢 **LISENSI & PENGGUNAAN:** > Aplikasi ini boleh digunakan dan disebarluaskan secara **GRATIS**.
+> 📢 **LISENSI & PENGGUNAAN:**
+> Aplikasi ini boleh digunakan dan disebarluaskan secara **GRATIS**.
 
 ---
 
-## 👨‍💻 Pengembang
+## ✨ Fitur Unggulan (Enterprise-Grade)
 
-Dikembangkan dengan dedikasi penuh oleh **Nurindra**.
-
-### 📞 Hubungi Pengembang
-
-Jika Anda membutuhkan bantuan instalasi, pelaporan *bug*, atau ingin mendiskusikan kustomisasi fitur tambahan, silakan hubungi melalui saluran berikut:
-
-* 📧 **Email:** [nurindra.id@gmail.com](mailto:nurindra.id@gmail.com)
-* 💬 **WhatsApp:** [+62 812-2032-9780](https://wa.me/6281220329780)
-* 📺 **YouTube:** [Nurindra ID](https://www.youtube.com/@nurindraid)
-* 📸 **Instagram:** [@kevinecraft](https://www.instagram.com/kevinecraft)
-* 🎵 **TikTok:** [@kevinecraft1](https://www.tiktok.com/@kevinecraft1)
+* 🚀 **High Performance Architecture:** Menggunakan *AJAX Chunking* & *JSONL Streams* untuk import ribuan data Excel tanpa membebani RAM server, serta *Session Unblocking* agar ujian siswa 100% bebas *lag*.
+* 🛡️ **Advanced Security:** Terlindungi dari *DDoS/Spam* via Global Throttle (Rate Limiting), proteksi *Stored XSS*, *Zip Slip* (Path Traversal), hingga *Excel Formula Injection*.
+* 🚫 **Sistem Anti-Curang (Strict CBT):**
+  * Sinkronisasi jam absolut server (kebal manipulasi jam/waktu di laptop siswa).
+  * Deteksi *Visibility Change* (Peringatan saat siswa pindah tab/minimize browser).
+  * Pencegahan klik kanan & *Inspect Element*.
+* 🖨️ **Smart Print Layout:** Cetak Kartu Siswa (Landscape) & ID Card Pengawas (Portrait) yang 100% presisi untuk kertas A4 tanpa *blank page* atau elemen terpotong.
+* 💾 **Disaster Recovery:** Modul *Backup & Restore Database* (beserta aset media) dan *Factory Reset* satu klik dari panel Admin.
 
 ---
 
-## ⚖️ Hak Cipta & Peringatan
+## 🛠️ Persyaratan Sistem (Prerequisites)
 
-**Kode sumber ini dilindungi oleh kekayaan intelektual.**
+Pastikan server (VPS/Shared Hosting) Anda memenuhi spesifikasi berikut:
 
-Walaupun aplikasi ini gratis untuk digunakan dan dibagikan, **DILARANG KERAS** melakukan tindakan berikut tanpa izin tertulis dari pihak pengembang:
-
-1. Memodifikasi (*re-branding* / mengubah nama pembuat) untuk diklaim sebagai milik pribadi.
-2. Menjual ulang (*re-sell*) bagian manapun dari aplikasi ini.
+* **PHP:** Versi 8.1 atau yang lebih baru.
+* **Database:** MySQL 5.7+ / MariaDB 10.3+
+* **Ekstensi PHP Wajib:** `intl`, `mbstring`, `gd`, `zip`, `curl`, `json`, `mysqlnd`
+* **Web Server:** Apache atau Nginx
 
 ---
-*Dibuat dengan ❤️ oleh Nurindra.*
+
+## 🚀 Panduan Instalasi & Deployment
+
+### Langkah 1: Clone Repositori
+
+Unduh atau *clone* repositori ini ke dalam server Anda:
+
+```bash
+git clone [https://github.com/username-anda/nurindracbt.git](https://github.com/username-anda/nurindracbt.git)
+cd nurindracbt
