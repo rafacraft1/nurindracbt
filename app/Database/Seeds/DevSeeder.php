@@ -120,7 +120,6 @@ class DevSeeder extends Seeder
             'waktu_selesai'  => date('Y-m-d 18:00:00'),
             'durasi'         => 90,
             'status'         => 'draft',
-            // Sinkronisasi data awal jadwal sesuai rancangan tabel baru
             'tahun_ajaran'   => '2025/2026',
             'semester'       => 'ganjil'
         ]);

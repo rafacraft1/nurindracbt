@@ -81,6 +81,7 @@ class CbtSystem extends Migration
             'created_at'    => ['type' => 'DATETIME', 'null' => true],
         ]);
         $this->forge->addKey('id', true);
+        $this->forge->addKey('mapel_id');
         $this->forge->createTable('bank_soal');
 
         $this->forge->addField([
@@ -91,11 +92,8 @@ class CbtSystem extends Migration
             'jurusan'        => ['type' => 'VARCHAR', 'constraint' => 50],
             'ruangan_id'     => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
             'pengawas_id'    => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'null' => true],
-
-            // PARAMETER CBT DITAMBAHKAN (Poin 2)
             'acak_soal'      => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 1],
             'tampil_nilai'   => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 0],
-
             'waktu_mulai'    => ['type' => 'DATETIME'],
             'waktu_selesai'  => ['type' => 'DATETIME'],
             'durasi'         => ['type' => 'INT', 'constraint' => 5],
@@ -104,12 +102,9 @@ class CbtSystem extends Migration
             'semester'       => ['type' => 'ENUM', 'constraint' => ['ganjil', 'genap'], 'default' => 'ganjil'],
         ]);
         $this->forge->addKey('id', true);
-
-        // PENAMBAHAN INDEX UNTUK PERFORMA QUERY SUPER CEPAT (Poin 3)
         $this->forge->addKey('status');
         $this->forge->addKey('ruangan_id');
         $this->forge->addKey(['tahun_ajaran', 'semester']);
-
         $this->forge->createTable('jadwal_ujian');
 
         $this->forge->addField([
@@ -128,6 +123,9 @@ class CbtSystem extends Migration
             'waktu_selesai_ujian' => ['type' => 'DATETIME', 'null' => true],
         ]);
         $this->forge->addKey('id', true);
+        $this->forge->addKey('jadwal_id');
+        $this->forge->addKey('siswa_id');
+        $this->forge->addKey(['jadwal_id', 'siswa_id']);
         $this->forge->createTable('hasil_ujian');
 
         $this->forge->addField([

@@ -162,12 +162,28 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         const GRACE_PERIOD_MS = 15 * 60 * 1000;
         const ABSOLUTE_DEADLINE = WAKTU_SELESAI_MS + GRACE_PERIOD_MS;
 
+        const SERVER_TIME_MS = <?= time() * 1000 ?>;
+        const CLIENT_TIME_MS = new window.Date().getTime();
+        const TIME_OFFSET = SERVER_TIME_MS - CLIENT_TIME_MS;
+
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.onkeydown = function(e) {
             if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) {
                 return false;
             }
         };
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Peringatan Kecurangan!',
+                    text: 'Sistem mendeteksi Anda meninggalkan halaman ujian. Tindakan ini dicatat di server!',
+                    confirmButtonText: 'Saya Mengerti',
+                    allowOutsideClick: false
+                });
+            }
+        });
 
         window.onerror = function(msg) {
             document.getElementById('kontenSoal').innerHTML = `<p class="text-red-600 font-bold text-center">Gagal merender soal. Terjadi kesalahan sistem: ${msg}</p>`;
@@ -185,9 +201,10 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         const STORAGE_KEY = `CBT_ANS_${JADWAL_ID}_${SISWA_ID}`;
         const TIME_KEY = `CBT_TIME_${JADWAL_ID}_${SISWA_ID}`;
 
-        // =====================================================================
-        // ENGINE DETEKSI KONEKSI JARINGAN SECARA REAL-TIME
-        // =====================================================================
+        function getAccurateTime() {
+            return new window.Date().getTime() + TIME_OFFSET;
+        }
+
         function setIndikatorKoneksi(isOnline) {
             const statusDiv = document.getElementById('statusKoneksi');
             const dot = document.getElementById('dotKoneksi');
@@ -206,7 +223,7 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
 
         window.addEventListener('online', () => {
             setIndikatorKoneksi(true);
-            sinkronisasiKeServer(); // Coba kirim data yang tertunda saat internet menyala lagi
+            sinkronisasiKeServer();
         });
 
         window.addEventListener('offline', () => {
@@ -220,7 +237,6 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                 }
             }).showToast();
         });
-        // =====================================================================
 
         async function initUjian() {
             setIndikatorKoneksi(navigator.onLine);
@@ -273,7 +289,8 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
 
             let htmlSoal = `<div class="prose max-w-none text-slate-800 text-lg">${teksSoal}</div>`;
             if (soal.file_audio) {
-                htmlSoal += `<div class="mt-5 bg-blue-50 p-3 rounded-xl border border-blue-100 flex w-fit"><audio controls class="h-10 outline-none"><source src="/uploads/audio/${soal.file_audio}" type="audio/mpeg"></audio></div>`;
+                // FIX: Menambahkan penanganan error untuk file audio gagal dimuat
+                htmlSoal += `<div class="mt-5 bg-blue-50 p-3 rounded-xl border border-blue-100 flex w-fit"><audio controls class="h-10 outline-none" onerror="this.parentElement.innerHTML='<span class=\\'text-red-500 text-sm font-bold\\'>Gagal memuat Audio.</span>'"><source src="/uploads/audio/${soal.file_audio}" type="audio/mpeg"></audio></div>`;
             }
             document.getElementById('kontenSoal').innerHTML = htmlSoal;
 
@@ -384,7 +401,6 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
 
         function simpanState() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(jawabanSiswa));
-
             clearTimeout(timeoutAutoSave);
             timeoutAutoSave = setTimeout(() => {
                 sinkronisasiKeServer();
@@ -392,12 +408,10 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
         }
 
         async function sinkronisasiKeServer() {
-            // Jika browser sedang offline, jangan buang resource dengan mencoba menembak ke server
             if (!navigator.onLine) {
                 setIndikatorKoneksi(false);
                 return;
             }
-
             try {
                 const formData = new window.FormData();
                 formData.append('jadwal_id', JADWAL_ID);
@@ -418,22 +432,19 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
                 }
 
                 const data = await response.json();
-
                 if (data.status === 'success' && data.csrfHash) {
                     setIndikatorKoneksi(true);
                     csrfHashValue = data.csrfHash;
                     document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfHashValue);
                 }
-
             } catch (error) {
                 setIndikatorKoneksi(false);
-                console.error("Gagal sinkronisasi jawaban ke server. Jatuh kembali ke Offline Mode (LocalStorage)", error);
             }
         }
 
         function initTimer() {
             let endTime = localStorage.getItem(TIME_KEY);
-            let nowInit = new window.Date().getTime();
+            let nowInit = getAccurateTime(); // Memanggil waktu aman dari offset server
 
             if (!endTime) {
                 endTime = nowInit + (DURASI * 60 * 1000);
@@ -458,7 +469,7 @@ $urlLogo = $logo ? base_url('uploads/' . $logo) : base_url('assets/img/logo.png'
             }
 
             intervalWaktu = setInterval(() => {
-                const now = new window.Date().getTime();
+                const now = getAccurateTime(); // Memanggil waktu aman dari offset server secara berulang
                 const distance = endTime - now;
 
                 if (distance <= 0) {

@@ -7,6 +7,15 @@
  * @var array $bankSoal
  * @var string|null $rombelFilter
  */
+
+// FIX LOGIKA: Deteksi dinamis apakah ujian ini memiliki soal essai
+$hasEssai = false;
+foreach ($bankSoal as $bSoal) {
+    if ($bSoal['jenis_soal'] === 'essai') {
+        $hasEssai = true;
+        break;
+    }
+}
 ?>
 <?= $this->extend('layouts/panel') ?>
 <?= $this->section('content') ?>
@@ -32,6 +41,11 @@
                 </svg>
                 <?= esc($jadwal['nama_ruangan']) ?>
             </span>
+            <?php if (!$hasEssai): ?>
+                <span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-bold border border-emerald-200 uppercase tracking-wide">
+                    Hanya Pilihan Ganda
+                </span>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -80,9 +94,11 @@
             <tbody class="divide-y divide-slate-100">
                 <?php $no = 1;
                 foreach ($siswa as $s):
-                    $pg = $s['nilai_pg'] ?? 0;
-                    $essai = $s['nilai_essai'] ?? 0;
-                    $total = ($pg + $essai) / 2;
+                    $pg = (float)($s['nilai_pg'] ?? 0);
+                    $essai = (float)($s['nilai_essai'] ?? 0);
+
+                    // FIX LOGIKA: Perhitungan dinamis. Jika tidak ada essai, nilai akhir adalah nilai PG murni.
+                    $total = $hasEssai ? (($pg + $essai) / 2) : $pg;
                 ?>
                     <tr class="hover:bg-blue-50/30 transition-colors h-16">
                         <td class="px-6 py-4 text-center font-medium"><?= $no++ ?></td>
@@ -122,7 +138,9 @@
                         </td>
 
                         <td class="px-6 py-4 text-center font-black text-blue-600 text-base"><?= number_format($pg, 1) ?></td>
-                        <td class="px-6 py-4 text-center font-black text-indigo-600 text-base"><?= number_format($essai, 1) ?></td>
+                        <td class="px-6 py-4 text-center font-black <?= $hasEssai ? 'text-indigo-600' : 'text-slate-300' ?> text-base">
+                            <?= $hasEssai ? number_format($essai, 1) : '-' ?>
+                        </td>
 
                         <td class="px-6 py-4 text-center">
                             <span class="inline-flex items-center justify-center w-12 h-8 bg-slate-800 text-white font-black rounded-lg shadow-sm">
@@ -149,8 +167,8 @@
                                         <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
                                             <?php foreach ($bankSoal as $soal): ?>
                                                 <?php if ($soal['jenis_soal'] === 'pg'):
-                                                    $jawabSiswa = $jawabanDecode[$soal['id']]['jawab'] ?? '';
-                                                    $kunciAsli  = $soal['kunci_jawaban'] ?? '';
+                                                    $jawabSiswa = esc($jawabanDecode[$soal['id']]['jawab'] ?? '');
+                                                    $kunciAsli  = esc($soal['kunci_jawaban'] ?? '');
                                                     $isBenar    = (strtolower((string)$jawabSiswa) === strtolower((string)$kunciAsli));
 
                                                     if (empty($jawabSiswa)) {
@@ -173,7 +191,7 @@
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if ($s['status'] == 'completed' && !empty($s['actual_jadwal_id'])):
+                                <?php if ($hasEssai && $s['status'] == 'completed' && !empty($s['actual_jadwal_id'])):
                                     $urlKoreksi = "/panel/penilaian/koreksi/{$s['actual_jadwal_id']}/{$s['id']}";
                                     if (!empty($rombelFilter)) {
                                         $urlKoreksi .= "?rombel=" . urlencode($rombelFilter);
@@ -185,6 +203,8 @@
                                         </svg>
                                         Koreksi
                                     </a>
+                                <?php elseif (!$hasEssai): ?>
+                                    <span class="text-[10px] text-slate-300 font-bold uppercase tracking-wide">-- Full PG --</span>
                                 <?php else: ?>
                                     <?php if (empty($s['jawaban_peserta'])): ?>
                                         <span class="text-[10px] text-slate-300 font-bold uppercase tracking-wide">-- Menunggu --</span>
@@ -225,7 +245,7 @@
             </button>
         </div>
         <div class="p-6 bg-slate-50/50">
-            <div id="modalGridPG" class="max-h-[60vh] overflow-y-auto p-1"></div>
+            <div id="modalGridPG" class="max-h-[60vh] overflow-y-auto p-1 custom-scrollbar"></div>
         </div>
         <div class="px-6 py-4 border-t border-slate-200 bg-white flex justify-end">
             <button type="button" onclick="tutupModalPG()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-slate-300">
@@ -241,15 +261,12 @@
         const content = document.getElementById('modalPGContent');
         const hiddenData = document.getElementById('data-pg-' + siswaId);
 
-        // Memasukkan nama dan mereplika HTML grid ke dalam modal
         document.getElementById('modalNamaSiswa').innerText = namaSiswa;
         document.getElementById('modalGridPG').innerHTML = hiddenData ? hiddenData.innerHTML : '<p class="text-center text-slate-500">Data tidak tersedia.</p>';
 
-        // Atasi CSS conflict hidden vs flex
         modal.classList.remove('hidden');
         modal.classList.add('flex');
 
-        // Timeout kecil untuk memicu transisi (animasi Pop-up CSS)
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             content.classList.remove('scale-95');
@@ -263,7 +280,6 @@
         modal.classList.add('opacity-0');
         content.classList.add('scale-95');
 
-        // Menunggu animasi selesai sebelum benar-benar di-hidden dan menghapus flex
         setTimeout(() => {
             modal.classList.add('hidden');
             modal.classList.remove('flex');

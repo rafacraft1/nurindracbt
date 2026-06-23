@@ -92,28 +92,15 @@ class BackupController extends BaseController
             // TAHAP 1: MEMBABAT HABIS FILE MEDIA DI FOLDER
             // =======================================================
             $folderDibersihkan = [
-                FCPATH . 'uploads/',         // Sapu logo lama
-                FCPATH . 'uploads/soal/',    // Sapu gambar soal
-                FCPATH . 'uploads/audio/',   // Sapu audio listening
-                FCPATH . 'data_soal/',       // Sapu file JSON jadwal/soal
-                FCPATH . 'data_ruangan/',    // Sapu cache ruangan
-                WRITEPATH . 'uploads/'       // Sapu temp file CI4
+                FCPATH . 'uploads/',
+                FCPATH . 'data_soal/',
+                FCPATH . 'data_ruangan/',
+                WRITEPATH . 'uploads/'
             ];
-
-            // Melindungi file pondasi agar folder tidak terekspos / error
-            $skipFiles = ['.', '..', 'index.html', '.htaccess'];
 
             foreach ($folderDibersihkan as $folder) {
                 if (is_dir($folder)) {
-                    $files = scandir($folder);
-                    foreach ($files as $file) {
-                        if (!in_array($file, $skipFiles)) {
-                            $filePath = $folder . $file;
-                            if (is_file($filePath)) {
-                                @unlink($filePath);
-                            }
-                        }
-                    }
+                    $this->recursiveEmptyDir($folder);
                 }
             }
 
@@ -121,25 +108,16 @@ class BackupController extends BaseController
             // TAHAP 2: BONGKAR & BANGUN ULANG DATABASE
             // =======================================================
             $db = \Config\Database::connect();
-
-            // Matikan Foreign Key Checks agar Regress (Drop Table) berjalan lancar tanpa error relasi
             $db->query('SET FOREIGN_KEY_CHECKS = 0');
 
-            // 1. Memanggil layanan Migration bawaan CI4
             $migrate = \Config\Services::migrations();
             $migrate->setSilent(true);
-
-            // 2. Rollback Total (Menjalankan fungsi down() di CbtSystem.php untuk DROP semua tabel)
             $migrate->regress(0);
-
-            // 3. Bangun Ulang (Menjalankan fungsi up() di CbtSystem.php untuk CREATE tabel fresh)
             $migrate->latest();
 
-            // 4. Suntikkan Data Pabrik (Menjalankan ProdSeeder.php)
             $seeder = \Config\Database::seeder();
             $seeder->call('ProdSeeder');
 
-            // Nyalakan kembali penjaga integritas relasi Database
             $db->query('SET FOREIGN_KEY_CHECKS = 1');
 
             return $this->response->setJSON([
@@ -147,11 +125,35 @@ class BackupController extends BaseController
                 'message' => 'Sistem berhasil direset ke standar awal pabrik.'
             ]);
         } catch (\Throwable $e) {
-            // Tangkap dan kembalikan pesan jika terjadi error server tingkat rendah
             return $this->response->setJSON([
                 'status'  => 'error',
                 'message' => 'Terjadi kesalahan sistem saat me-reset: ' . $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * FIX LOGIKA: Helper khusus untuk menghapus isi folder secara rekursif hingga ke akar
+     * namun tetap menjaga struktur pondasi folder dan file index.html/.htaccess
+     */
+    private function recursiveEmptyDir(string $dir): void
+    {
+        $skipFiles = ['.', '..', 'index.html', '.htaccess'];
+        $items = scandir($dir);
+
+        foreach ($items as $item) {
+            if (in_array($item, $skipFiles)) {
+                continue;
+            }
+
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+
+            if (is_dir($path)) {
+                $this->recursiveEmptyDir($path);
+                @rmdir($path); // Hapus folder kosong setelah isinya dibersihkan
+            } else {
+                @unlink($path);
+            }
         }
     }
 }

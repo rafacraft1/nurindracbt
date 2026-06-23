@@ -23,10 +23,7 @@ class HasilUjianModel extends Model
         'nilai_essai'
     ];
 
-    /**
-     * Helper khusus untuk mengambil data hasil ujian per Siswa & Jadwal
-     */
-    public function getHasilByJadwalSiswa(string $jadwalId, string $siswaId): ?array
+    public function getHasilByJadwalSiswa(int|string $jadwalId, int|string $siswaId): ?array
     {
         return $this->where('jadwal_id', $jadwalId)
             ->where('siswa_id', $siswaId)

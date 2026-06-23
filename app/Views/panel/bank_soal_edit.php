@@ -148,6 +148,9 @@ if (!empty($soal['opsi_jawaban'])) {
 
 <?= $this->section('scripts') ?>
 <script>
+    let csrfTokenName = '<?= csrf_token() ?>';
+    let csrfHash = '<?= csrf_hash() ?>';
+
     $(document).ready(function() {
         const summernoteConfig = {
             toolbar: [
@@ -157,7 +160,13 @@ if (!empty($soal['opsi_jawaban'])) {
             ],
             callbacks: {
                 onImageUpload: function(files) {
-                    for (let i = 0; i < files.length; i++) compressAndInsertImage(files[i], $(this));
+                    if (typeof showToast === 'function') {
+                        showToast("Sedang memproses dan mengunggah gambar...", "success");
+                    }
+
+                    for (let i = 0; i < files.length; i++) {
+                        compressAndUploadImage(files[i], $(this));
+                    }
                 }
             }
         };
@@ -174,11 +183,13 @@ if (!empty($soal['opsi_jawaban'])) {
         toggleJenisSoal();
     });
 
-    function compressAndInsertImage(file, editorElement) {
+    function compressAndUploadImage(file, editorElement) {
         if (!file.type.match(/image.*/)) {
-            showToast("Bukan file gambar!", "error");
+            if (typeof showToast === 'function') showToast("Bukan file gambar!", "error");
+            else alert("Bukan file gambar!");
             return;
         }
+
         const reader = new window.FileReader();
         reader.onload = function(e) {
             const image = new window.Image();
@@ -187,14 +198,45 @@ if (!empty($soal['opsi_jawaban'])) {
                 let width = image.width,
                     height = image.height,
                     MAX = 800;
+
                 if (width > MAX) {
                     height *= MAX / width;
                     width = MAX;
                 }
+
                 canvas.width = width;
                 canvas.height = height;
                 canvas.getContext('2d').drawImage(image, 0, 0, width, height);
-                editorElement.summernote('insertImage', canvas.toDataURL('image/webp', 0.8));
+
+                canvas.toBlob(function(blob) {
+                    let formData = new window.FormData();
+                    formData.append('gambar_soal', blob, 'img_' + Date.now() + '.webp');
+                    formData.append(csrfTokenName, csrfHash);
+
+                    $.ajax({
+                        url: '/panel/bank-soal/upload-gambar',
+                        method: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            if (response.success) {
+                                editorElement.summernote('insertImage', response.url);
+
+                                // FIX: Mencegah error 403 saat mensubmit form dengan token yang sudah di-refresh
+                                csrfHash = response.csrf;
+                                $('input[name="' + csrfTokenName + '"]').val(csrfHash);
+                            } else {
+                                if (typeof showToast === 'function') showToast(response.message, "error");
+                                else alert(response.message);
+                            }
+                        },
+                        error: function() {
+                            if (typeof showToast === 'function') showToast("Gagal terhubung ke server saat unggah gambar.", "error");
+                            else alert("Gagal terhubung ke server.");
+                        }
+                    });
+                }, 'image/webp', 0.8);
             }
             image.src = e.target.result;
         }

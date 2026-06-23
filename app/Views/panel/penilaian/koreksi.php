@@ -49,7 +49,15 @@ if (!empty($rombelFilter)) {
         <?php $no = 1;
         foreach ($soal_essai as $soal):
             $idSoal = $soal['id'];
-            $jawabanSiswa = $jawaban_json[$idSoal]['jawab'] ?? '<span class="text-red-500 italic font-medium flex items-center"><svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Siswa tidak mengisi jawaban (Kosong)</span>';
+            $rawJawaban = $jawaban_json[$idSoal]['jawab'] ?? '';
+
+            // FIX SECURITY: Mencegah serangan Stored XSS dari jawaban siswa 
+            // sekaligus menggunakan nl2br agar format paragraf siswa tetap rapi
+            if (trim($rawJawaban) !== '') {
+                $jawabanSiswa = nl2br(esc($rawJawaban));
+            } else {
+                $jawabanSiswa = '<span class="text-red-500 italic font-medium flex items-center"><svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Siswa tidak mengisi jawaban (Kosong)</span>';
+            }
         ?>
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
                 <div class="absolute top-0 left-0 w-1.5 h-full bg-slate-200"></div>

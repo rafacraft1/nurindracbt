@@ -40,11 +40,21 @@ class AuthFilter implements FilterInterface
             if ($arguments) {
                 $roleRequired = $arguments[0];
 
+                if ($roleRequired === 'admin' && $role !== 'admin') {
+                    return redirect()->to('/panel/dashboard')->with('error', 'Akses ditolak! Khusus Administrator.');
+                }
                 if ($roleRequired === 'panitia' && $isPanitia != 1) {
                     return redirect()->to('/panel/dashboard')->with('error', 'Akses ditolak! Khusus Panitia.');
                 }
                 if ($roleRequired === 'guru' && $role !== 'guru') {
                     return redirect()->to('/panel/dashboard')->with('error', 'Akses ditolak! Khusus Guru.');
+                }
+                if ($roleRequired === 'pengawas' && $role !== 'pengawas') {
+                    return redirect()->to('/panel/dashboard')->with('error', 'Akses ditolak! Khusus Pengawas.');
+                }
+            } else {
+                if ($uri !== 'panel/dashboard' && $uri !== 'panel' && strpos($uri, 'panel/') === 0) {
+                    return redirect()->to('/panel/dashboard')->with('error', 'Akses tidak sah atau rute belum terproteksi dengan benar.');
                 }
             }
         }

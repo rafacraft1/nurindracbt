@@ -11,7 +11,6 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <style>
-        /* Mencegah zoom tidak sengaja di HP saat double tap */
         body {
             touch-action: manipulation;
         }
@@ -66,20 +65,32 @@
             };
         })();
 
-        // Global Toast Helper (Bisa dipanggil kapan saja)
         function showToast(msg, type = 'success') {
             Toastify({
                 text: msg,
-                duration: type === 'warning' ? 5000 : 3000, // Error/Warning tampil lebih lama
-                gravity: "bottom", // Di HP lebih enak muncul di bawah
+                duration: type === 'warning' ? 5000 : 3000,
+                gravity: "bottom",
                 position: "center",
                 style: {
                     background: type === 'success' ? "#10b981" : (type === 'warning' ? "#f59e0b" : "#ef4444"),
                     borderRadius: "8px",
-                    fontSize: "14px"
+                    fontSize: "14px",
+                    fontWeight: "bold"
                 }
             }).showToast();
         }
+
+        <?php if (session()->getFlashdata('error')) : ?>
+            showToast("<?= esc(session()->getFlashdata('error'), 'js') ?>", 'error');
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('success')) : ?>
+            showToast("<?= esc(session()->getFlashdata('success'), 'js') ?>", 'success');
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('warning')) : ?>
+            showToast("<?= esc(session()->getFlashdata('warning'), 'js') ?>", 'warning');
+        <?php endif; ?>
     </script>
 
     <?= $this->renderSection('scripts') ?>

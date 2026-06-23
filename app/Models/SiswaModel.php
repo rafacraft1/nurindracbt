@@ -26,9 +26,6 @@ class SiswaModel extends Model
         'created_at'
     ];
 
-    /**
-     * Ambil data siswa dengan pagination, pencarian, dan pengurutan dinamis
-     */
     public function getPaginatedSiswa(?string $search, string $sortCol, string $sortDir, int $perPage, int $offset): array
     {
         $builder = $this->builder();
@@ -54,38 +51,35 @@ class SiswaModel extends Model
         return $builder->limit($perPage, $offset)->get()->getResultArray();
     }
 
-    /**
-     * Hitung total siswa untuk kalkulasi halaman (Pagination)
-     */
     public function countTotalSiswa(?string $search = null): int
     {
         $builder = $this->builder();
+
         if (!empty($search)) {
             $builder->groupStart()
                 ->like('nama_lengkap', $search)
                 ->orLike('nisn', $search)
                 ->groupEnd();
         }
+
         return $builder->countAllResults();
     }
 
-    /**
-     * Cek apakah NISN sudah terdaftar
-     */
-    public function isNisnExist(string $nisn, ?string $excludeId = null): bool
+    public function isNisnExist(string $nisn, int|string|null $excludeId = null): bool
     {
-        $builder = $this->where('nisn', $nisn);
+        $builder = $this->builder()->where('nisn', $nisn);
+
         if ($excludeId) {
             $builder->where('id !=', $excludeId);
         }
+
         return $builder->countAllResults() > 0;
     }
 
-    /**
-     * Fungsi helper untuk mengosongkan ruangan secara massal
-     */
-    public function kosongkanRuangan(string $ruanganId): bool
+    public function kosongkanRuangan(int|string $ruanganId): bool
     {
-        return $this->where('ruangan_id', $ruanganId)->set(['ruangan_id' => null])->update();
+        return $this->builder()
+            ->where('ruangan_id', $ruanganId)
+            ->update(['ruangan_id' => null]);
     }
 }

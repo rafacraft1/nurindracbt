@@ -325,20 +325,29 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
-                    <div>
-                        <label class="block text-[11px] font-bold text-blue-800 mb-1.5 uppercase tracking-wide">Jam Ujian Dibuka</label>
-                        <input type="datetime-local" name="waktu_mulai" required class="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-[13px] bg-white">
+                <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                    <div class="flex items-center text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-3">
+                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Pengaturan Waktu Ujian (Auto-Calculate)
                     </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-red-800 mb-1.5 uppercase tracking-wide">Jam Ujian Ditutup</label>
-                        <input type="datetime-local" name="waktu_selesai" required class="w-full px-3 py-2 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 font-mono text-[13px] bg-white">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-emerald-800 mb-1.5 uppercase tracking-wide">Durasi Pengerjaan</label>
-                        <div class="relative">
-                            <input type="number" name="durasi" min="10" value="90" required class="w-full pl-3 pr-12 py-2 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 bg-white">
-                            <span class="absolute right-3 top-2.5 text-xs font-bold text-emerald-600">Menit</span>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-blue-800 mb-1.5 uppercase tracking-wide">Jam Ujian Dibuka</label>
+                            <input type="datetime-local" name="waktu_mulai" id="create_waktu_mulai" required class="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-[13px] bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-emerald-800 mb-1.5 uppercase tracking-wide">Durasi Pengerjaan</label>
+                            <div class="relative">
+                                <input type="number" name="durasi" id="create_durasi" min="10" value="90" required class="w-full pl-3 pr-12 py-2 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700 bg-white">
+                                <span class="absolute right-3 top-2.5 text-xs font-bold text-emerald-600">Menit</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-red-800 mb-1.5 uppercase tracking-wide">Jam Ujian Ditutup</label>
+                            <input type="datetime-local" name="waktu_selesai" id="create_waktu_selesai" required class="w-full px-3 py-2 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 font-mono text-[13px] bg-white">
+                            <p class="text-[9px] text-red-600 mt-1 font-medium leading-tight">*Waktu ditutup otomatis dihitung dari Jam Dibuka + Durasi + 15 Menit Toleransi.</p>
                         </div>
                     </div>
                 </div>
@@ -446,20 +455,29 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-amber-50/50 border border-amber-100">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-800 mb-1.5 uppercase tracking-wide">Jam Ujian Dibuka</label>
-                        <input type="datetime-local" name="waktu_mulai" id="edit_waktu_mulai" required class="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 font-mono text-[13px] bg-white">
+                <div class="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                    <div class="flex items-center text-[10px] text-amber-700 font-bold uppercase tracking-wider mb-3">
+                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Pengaturan Waktu Ujian (Auto-Calculate)
                     </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-800 mb-1.5 uppercase tracking-wide">Jam Ujian Ditutup</label>
-                        <input type="datetime-local" name="waktu_selesai" id="edit_waktu_selesai" required class="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 font-mono text-[13px] bg-white">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-800 mb-1.5 uppercase tracking-wide">Durasi Pengerjaan</label>
-                        <div class="relative">
-                            <input type="number" name="durasi" id="edit_durasi" min="10" required class="w-full pl-3 pr-12 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 font-bold text-slate-700 bg-white">
-                            <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-500">Menit</span>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-800 mb-1.5 uppercase tracking-wide">Jam Ujian Dibuka</label>
+                            <input type="datetime-local" name="waktu_mulai" id="edit_waktu_mulai" required class="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 font-mono text-[13px] bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-800 mb-1.5 uppercase tracking-wide">Durasi Pengerjaan</label>
+                            <div class="relative">
+                                <input type="number" name="durasi" id="edit_durasi" min="10" required class="w-full pl-3 pr-12 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 font-bold text-slate-700 bg-white">
+                                <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-500">Menit</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-800 mb-1.5 uppercase tracking-wide">Jam Ujian Ditutup</label>
+                            <input type="datetime-local" name="waktu_selesai" id="edit_waktu_selesai" required class="w-full px-3 py-2 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 font-mono text-[13px] bg-white">
+                            <p class="text-[9px] text-amber-700 mt-1 font-medium leading-tight">*Waktu ditutup otomatis dihitung dari Jam Dibuka + Durasi + 15 Menit Toleransi.</p>
                         </div>
                     </div>
                 </div>
@@ -589,7 +607,6 @@
         document.getElementById('edit_ruangan_id').value = jadwal.ruangan_id;
         document.getElementById('edit_durasi').value = jadwal.durasi;
 
-        // Parameter CBT Baru
         document.getElementById('edit_acak_soal').checked = (jadwal.acak_soal == 1);
         document.getElementById('edit_tampil_nilai').checked = (jadwal.tampil_nilai == 1);
 
@@ -629,5 +646,35 @@
             if (result.isConfirmed) document.getElementById('formDelete' + id).submit();
         })
     }
+
+    function autoCalcWaktuSelesai(prefix) {
+        let valMulai = document.getElementById(prefix + '_waktu_mulai').value;
+        let valDurasi = parseInt(document.getElementById(prefix + '_durasi').value);
+
+        if (valMulai && !isNaN(valDurasi)) {
+            let dateObj = new window.Date(valMulai);
+
+            // Tambahkan durasi murni + 15 Menit Toleransi Keterlambatan standar CBT
+            dateObj.setMinutes(dateObj.getMinutes() + valDurasi + 15);
+
+            let y = dateObj.getFullYear();
+            let m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            let d = String(dateObj.getDate()).padStart(2, '0');
+            let h = String(dateObj.getHours()).padStart(2, '0');
+            let min = String(dateObj.getMinutes()).padStart(2, '0');
+
+            document.getElementById(prefix + '_waktu_selesai').value = `${y}-${m}-${d}T${h}:${min}`;
+        }
+    }
+
+    ['create', 'edit'].forEach(prefix => {
+        let elMulai = document.getElementById(prefix + '_waktu_mulai');
+        let elDurasi = document.getElementById(prefix + '_durasi');
+
+        if (elMulai && elDurasi) {
+            elMulai.addEventListener('change', () => autoCalcWaktuSelesai(prefix));
+            elDurasi.addEventListener('input', () => autoCalcWaktuSelesai(prefix));
+        }
+    });
 </script>
 <?= $this->endSection() ?>

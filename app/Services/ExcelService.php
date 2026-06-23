@@ -2,15 +2,17 @@
 
 namespace App\Services;
 
-// PERBAIKAN: Menggunakan namespace HTTP Files yang benar
 use CodeIgniter\HTTP\Files\UploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use Exception;
 
 class ExcelService
 {
     /**
-     * Membaca dan membersihkan baris Excel dari UploadedFile
+     * Membaca dan membersihkan baris Excel dari UploadedFile (Sanitasi Formula Injection)
      */
     public function parseSiswaExcel(UploadedFile $file): array
     {
@@ -23,11 +25,18 @@ class ExcelService
             foreach ($rows as $key => $row) {
                 if ($key == 0) continue; // Abaikan Header (Baris 1)
 
-                // Casting ke string untuk mencegah error Intelephense P1132
                 $nisn = trim((string)($row[0] ?? ''));
                 $nama = trim((string)($row[1] ?? ''));
 
                 if (empty($nisn) || empty($nama)) continue;
+
+                // FIX SECURITY: Mencegah CSV/Excel Formula Injection pada input massal data string
+                foreach ($row as $cellKey => $cellValue) {
+                    $cellStr = trim((string)$cellValue);
+                    if (!empty($cellStr) && in_array(substr($cellStr, 0, 1), ['=', '+', '-', '@'])) {
+                        $row[$cellKey] = "'" . $cellStr;
+                    }
+                }
 
                 $cleanRows[] = $row;
             }
@@ -41,13 +50,13 @@ class ExcelService
     /**
      * Membuat object Spreadsheet untuk Export Bank Soal
      */
-    public function buildBankSoalExcel(array $soal): \PhpOffice\PhpSpreadsheet\Spreadsheet
+    public function buildBankSoalExcel(array $soal): Spreadsheet
     {
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         $sheet->getStyle('A1:H1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:H1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFE2E8F0');
+        $sheet->getStyle('A1:H1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE2E8F0');
 
         $headers = ['JENIS (PG/ESSAI)', 'PERTANYAAN', 'OPSI A (Khusus PG)', 'OPSI B (Khusus PG)', 'OPSI C (Khusus PG)', 'OPSI D (Khusus PG)', 'OPSI E (Khusus PG)', 'KUNCI (A/B/C/D/E atau Teks Essai)'];
         $sheet->fromArray($headers, null, 'A1');
@@ -96,6 +105,14 @@ class ExcelService
 
             if (empty($jenis) || empty($pertanyaan)) continue;
 
+            // FIX SECURITY: Amankan data teks pertanyaan & opsi dari Formula Injection
+            foreach ($row as $cellKey => $cellValue) {
+                $cellStr = trim((string)$cellValue);
+                if (!empty($cellStr) && in_array(substr($cellStr, 0, 1), ['=', '+', '-', '@'])) {
+                    $row[$cellKey] = "'" . $cellStr;
+                }
+            }
+
             if ($jenis === 'pg') {
                 $opsi = [
                     'A' => trim((string)($row[2] ?? '')),
@@ -128,12 +145,22 @@ class ExcelService
 
         return $dataInsert;
     }
+
     /**
-     * Membuat object Spreadsheet untuk Export Rekap Nilai Ujian
+     * Membuat object Spreadsheet untuk Export Rekap Nilai Ujian (Fix Kalkulasi Rata-rata)
      */
-    public function buildRekapNilaiExcel(array $jadwalRef, array $siswa): \PhpOffice\PhpSpreadsheet\Spreadsheet
+    public function buildRekapNilaiExcel(array $jadwalRef, array $siswa, array $bankSoal): Spreadsheet
     {
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        // FIX LOGIKA: Lakukan pengecekan valid apakah mata pelajaran ini memiliki tipe soal essai
+        $hasEssai = false;
+        foreach ($bankSoal as $bSoal) {
+            if ($bSoal['jenis_soal'] === 'essai') {
+                $hasEssai = true;
+                break;
+            }
+        }
+
+        $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         $sheet->setCellValue('A1', 'REKAPITULASI NILAI UJIAN TERPADU');
@@ -144,7 +171,7 @@ class ExcelService
         $headers = ['NO', 'NISN', 'NAMA LENGKAP', 'NILAI PG', 'NILAI ESSAI', 'TOTAL NILAI (RATA-RATA)', 'STATUS', 'KETERANGAN (REGULER/SUSULAN)'];
         $sheet->fromArray($headers, null, 'A5');
         $sheet->getStyle('A5:H5')->getFont()->setBold(true);
-        $sheet->getStyle('A5:H5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFD9D9D9');
+        $sheet->getStyle('A5:H5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD9D9D9');
 
         $baris = 6;
         $no = 1;
@@ -152,15 +179,18 @@ class ExcelService
         foreach ($siswa as $s) {
             $pg    = (float)($s['nilai_pg'] ?? 0);
             $essai = (float)($s['nilai_essai'] ?? 0);
-            $total = ($pg + $essai) / 2;
+
+            // FIX LOGIKA: Jika tidak ada essai, total nilai diisi nilai PG murni secara adil (bukan dibagi dua)
+            $total = $hasEssai ? (($pg + $essai) / 2) : $pg;
+
             $status = ($s['status'] === 'completed') ? 'SELESAI' : (($s['status'] === 'progress') ? 'MENGERJAKAN' : 'BELUM UJIAN');
             $keterangan = (string)($s['keterangan_ujian'] ?? '-');
 
             $sheet->setCellValue('A' . $baris, $no++);
-            $sheet->setCellValueExplicit('B' . $baris, (string)$s['nisn'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('B' . $baris, (string)$s['nisn'], DataType::TYPE_STRING);
             $sheet->setCellValue('C' . $baris, (string)$s['nama_lengkap']);
             $sheet->setCellValue('D' . $baris, $pg);
-            $sheet->setCellValue('E' . $baris, $essai);
+            $sheet->setCellValue('E' . $baris, $hasEssai ? $essai : '-');
             $sheet->setCellValue('F' . $baris, $total);
             $sheet->setCellValue('G' . $baris, $status);
             $sheet->setCellValue('H' . $baris, $keterangan);

@@ -23,22 +23,25 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
 
     $routes->get('dashboard', 'PanelController::dashboard');
 
-    $routes->get('manajemen-staff', 'AdminController::staff');
-    $routes->post('manajemen-staff/store', 'AdminController::storeStaff');
-    $routes->post('manajemen-staff/update/(:num)', 'AdminController::updateStaff/$1');
-    $routes->post('manajemen-staff/delete/(:num)', 'AdminController::deleteStaff/$1');
+    // BUNGKUS KHUSUS ADMIN
+    $routes->group('', ['filter' => 'auth:admin'], static function ($routes) {
+        $routes->get('manajemen-staff', 'AdminController::staff');
+        $routes->post('manajemen-staff/store', 'AdminController::storeStaff');
+        $routes->post('manajemen-staff/update/(:num)', 'AdminController::updateStaff/$1');
+        $routes->post('manajemen-staff/delete/(:num)', 'AdminController::deleteStaff/$1');
 
-    $routes->get('pengaturan', 'AdminController::pengaturan');
-    $routes->post('pengaturan/update', 'AdminController::updatePengaturan');
+        $routes->get('pengaturan', 'AdminController::pengaturan');
+        $routes->post('pengaturan/update', 'AdminController::updatePengaturan');
 
-    // Modul Backup & Restore (Admin Only)
-    $routes->get('backup-restore', 'BackupController::index');
-    $routes->get('backup-restore/download/(:segment)', 'BackupController::download/$1');
-    $routes->post('backup-restore/restore', 'BackupController::restore');
-    $routes->post('backup-restore/factory-reset', 'BackupController::factoryReset');
+        // Modul Backup & Restore (Admin Only)
+        $routes->get('backup-restore', 'BackupController::index');
+        $routes->get('backup-restore/download/(:segment)', 'BackupController::download/$1');
+        $routes->post('backup-restore/restore', 'BackupController::restore');
+        $routes->post('backup-restore/factory-reset', 'BackupController::factoryReset');
+    });
 
+    // BUNGKUS KHUSUS PANITIA
     $routes->group('', ['filter' => 'auth:panitia'], static function ($routes) {
-
         $routes->get('siswa', 'SiswaController::index');
         $routes->post('siswa/store', 'SiswaController::store');
         $routes->post('siswa/update/(:num)', 'SiswaController::update/$1');
@@ -75,6 +78,7 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
         $routes->get('cetak-kartu', 'SiswaController::cetakKartu');
     });
 
+    // BUNGKUS KHUSUS GURU
     $routes->group('', ['filter' => 'auth:guru'], static function ($routes) {
         $routes->get('bank-soal', 'GuruController::index');
         $routes->get('bank-soal/create', 'GuruController::create');
@@ -87,7 +91,8 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
         $routes->post('bank-soal/upload-gambar', 'GuruController::uploadGambar');
     });
 
-    $routes->group('ruang-pengawas', static function ($routes) {
+    // BUNGKUS KHUSUS PENGAWAS
+    $routes->group('ruang-pengawas', ['filter' => 'auth:pengawas'], static function ($routes) {
         $routes->get('/', 'PengawasController::index');
         $routes->get('monitor/(:num)', 'PengawasController::monitor/$1');
         $routes->post('generate-token-ajax/(:num)', 'PengawasController::generateTokenAjax/$1');
@@ -97,6 +102,7 @@ $routes->group('panel', ['filter' => 'auth'], static function ($routes) {
         $routes->post('bebaskan-token-ajax/(:any)', 'PengawasController::bebaskanTokenAjax/$1');
     });
 
+    // BUNGKUS KHUSUS PENILAIAN (GURU)
     $routes->group('penilaian', ['filter' => 'auth:guru'], function ($routes) {
         $routes->get('/', 'PenilaianController::index');
         $routes->get('detail/(:num)', 'PenilaianController::detail/$1');

@@ -187,7 +187,9 @@
                         success: function(response) {
                             if (response.success) {
                                 editorElement.summernote('insertImage', response.url);
+
                                 csrfHash = response.csrf;
+                                $('input[name="' + csrfTokenName + '"]').val(csrfHash);
                             } else {
                                 if (typeof showToast === 'function') showToast(response.message, "error");
                                 else alert(response.message);

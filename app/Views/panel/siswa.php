@@ -347,15 +347,12 @@
 
 <?= $this->section('scripts') ?>
 <script>
-    // ==========================================
-    // MANAJEMEN CHECKBOX (PERSISTENT LINTAS PAGE)
-    // ==========================================
     let selectedIds = JSON.parse(sessionStorage.getItem('selectedSiswaIds')) || [];
 
     const checkAll = document.getElementById('checkAll');
-    const checkItems = document.querySelectorAll('.checkItem');
     const btnBulkDelete = document.getElementById('btnBulkDelete');
     const countSelected = document.getElementById('countSelected');
+    const tableBody = document.getElementById('tableSiswaBody');
 
     function saveCheckboxState() {
         sessionStorage.setItem('selectedSiswaIds', JSON.stringify(selectedIds));
@@ -373,34 +370,38 @@
             btnBulkDelete.classList.remove('flex');
         }
 
+        const checkItems = document.querySelectorAll('.checkItem');
         if (checkItems.length > 0) {
             const allCheckedOnPage = Array.from(checkItems).every(item => item.checked);
             checkAll.checked = allCheckedOnPage;
         }
     }
 
-    checkItems.forEach(item => {
+    // FIX OPTIMASI (MEMORY LEAK): Menggunakan teknik Event Delegation di Tbody induk
+    if (tableBody) {
+        tableBody.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('checkItem')) {
+                if (e.target.checked) {
+                    if (!selectedIds.includes(e.target.value)) selectedIds.push(e.target.value);
+                } else {
+                    selectedIds = selectedIds.filter(id => id !== e.target.value);
+                }
+                saveCheckboxState();
+            }
+        });
+    }
+
+    // Sinkronisasi status checkbox saat render page
+    document.querySelectorAll('.checkItem').forEach(item => {
         if (selectedIds.includes(item.value)) {
             item.checked = true;
         }
-
-        item.addEventListener('change', function() {
-            if (this.checked) {
-                if (!selectedIds.includes(this.value)) selectedIds.push(this.value);
-            } else {
-                selectedIds = selectedIds.filter(id => id !== this.value);
-            }
-            saveCheckboxState();
-        });
     });
-
-    updateBulkDeleteUI();
 
     if (checkAll) {
         checkAll.addEventListener('change', function() {
             const isChecked = this.checked;
-
-            checkItems.forEach(item => {
+            document.querySelectorAll('.checkItem').forEach(item => {
                 item.checked = isChecked;
                 if (isChecked) {
                     if (!selectedIds.includes(item.value)) selectedIds.push(item.value);
@@ -411,6 +412,7 @@
             saveCheckboxState();
         });
     }
+    updateBulkDeleteUI();
 
     function konfirmasiHapusBatch() {
         if (selectedIds.length === 0) return;
@@ -459,9 +461,6 @@
         });
     }
 
-    // ==========================================
-    // MANAJEMEN MODAL DAN FUNGSI LAINNYA
-    // ==========================================
     const mSiswa = document.getElementById('modalSiswa');
     const cSiswa = document.getElementById('modalSiswaContent');
     const fSiswa = document.getElementById('formSiswa');
@@ -535,9 +534,6 @@
         })
     }
 
-    // ==========================================
-    // IMPORT EXCEL DENGAN AJAX CHUNKING
-    // ==========================================
     const formImportSiswa = document.getElementById('formImportSiswa');
     if (formImportSiswa) {
         formImportSiswa.addEventListener('submit', async function(e) {

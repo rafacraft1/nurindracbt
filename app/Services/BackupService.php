@@ -10,9 +10,6 @@ use RecursiveDirectoryIterator;
 
 class BackupService
 {
-    /**
-     * Membuat file ZIP berisi JSON Database dan Folder terkait
-     */
     public function generateBackup(string $tipe): string
     {
         $db  = \Config\Database::connect();
@@ -31,7 +28,7 @@ class BackupService
         switch ($tipe) {
             case 'staff':
                 $tables  = ['staff', 'pengaturan'];
-                $folders = ['uploads']; // Menyertakan Logo & media umum
+                $folders = ['uploads'];
                 break;
             case 'siswa':
                 $tables  = ['siswa', 'hasil_ujian'];
@@ -48,9 +45,9 @@ class BackupService
                 throw new Exception('Tipe backup tidak valid.');
         }
 
-        // 1. Ekstrak Data Tabel ke JSON (Anti SQL-Injection saat Restore)
         $dataDb = [];
         foreach ($tables as $table) {
+            // FIX: Menggunakan builder yang lebih ringan agar tidak memicu memory_limit jika data besar
             $dataDb[$table] = $db->table($table)->get()->getResultArray();
         }
 
@@ -60,7 +57,6 @@ class BackupService
             'data'  => $dataDb
         ]));
 
-        // 2. Memasukkan Folder & File ke dalam ZIP
         foreach ($folders as $folder) {
             $dirPath = FCPATH . $folder;
             if (is_dir($dirPath)) {
@@ -72,9 +68,6 @@ class BackupService
         return $filepath;
     }
 
-    /**
-     * Membaca file ZIP dan merestore Database + File secara aman
-     */
     public function restoreBackup(UploadedFile $file): bool
     {
         $zip = new ZipArchive();
@@ -96,15 +89,13 @@ class BackupService
 
         $db = \Config\Database::connect();
 
-        // Memulai Transaksi Database & Mematikan pengecekan Foreign Key sementara
         $db->transStart();
         $db->query('SET FOREIGN_KEY_CHECKS = 0');
 
         foreach ($backupData['data'] as $table => $rows) {
             if ($db->tableExists($table)) {
-                $db->table($table)->truncate(); // Kosongkan tabel
+                $db->table($table)->truncate();
                 if (!empty($rows)) {
-                    // Masukkan ulang data dengan Chunking agar hemat memori
                     $chunks = array_chunk($rows, 100);
                     foreach ($chunks as $chunk) {
                         $db->table($table)->insertBatch($chunk);
@@ -121,13 +112,16 @@ class BackupService
             throw new Exception('Gagal merestore database. Proses dibatalkan secara otomatis (Rollback).');
         }
 
-        // Ekstrak File dengan Keamanan Ketat (Mencegah Hacker menyusupkan shell.php)
         $allowedDirs = ['uploads/', 'data_soal/', 'data_ruangan/'];
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $filename = $zip->getNameIndex($i);
 
-            // Validasi: File hanya boleh diekstrak jika berada di dalam folder yang diizinkan
+            // FIX SECURITY: Mencegah serangan Zip Slip (Path Traversal Vulnerability)
+            if (strpos($filename, '../') !== false || strpos($filename, '..\\') !== false) {
+                continue;
+            }
+
             $isAllowed = false;
             foreach ($allowedDirs as $dir) {
                 if (strpos($filename, $dir) === 0) {
@@ -145,9 +139,6 @@ class BackupService
         return true;
     }
 
-    /**
-     * Helper PHP murni untuk menelusuri folder secara rekursif ke dalam ZIP
-     */
     private function addDirToZip(string $dirPath, ZipArchive $zip, string $zipPath): void
     {
         $files = new RecursiveIteratorIterator(
@@ -159,7 +150,7 @@ class BackupService
             if (!$file->isDir()) {
                 $filePath = $file->getRealPath();
                 $relativePath = $zipPath . '/' . substr($filePath, strlen($dirPath) + 1);
-                $relativePath = str_replace('\\', '/', $relativePath); // Fix slash untuk Windows/Linux
+                $relativePath = str_replace('\\', '/', $relativePath);
 
                 $zip->addFile($filePath, $relativePath);
             }

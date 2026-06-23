@@ -17,7 +17,6 @@ $sekarangTs      = time();
 $isBelumMulai = $sekarangTs < $waktuMulaiTs;
 $isSelesai    = $sekarangTs > $waktuSelesaiTs;
 
-// FIX LINTER TAILWIND: Deklarasi kelas CSS secara dinamis di level PHP
 $bgMonitorClass = $isBelumMulai ? 'bg-slate-100 border-slate-300' : ($isSelesai ? 'bg-red-900 border-red-700' : 'bg-slate-900 border-slate-700');
 $btnRilisClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 cursor-not-allowed border-slate-300' : 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/30';
 $btnBebasClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 cursor-not-allowed border-slate-300' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-600/30';
@@ -279,15 +278,26 @@ $btnBebasClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 c
 <script>
     let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
+    function updateAllCSRFToken(newToken) {
+        csrfToken = newToken;
+        document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfToken);
+        document.querySelectorAll('input[name="<?= csrf_token() ?>"]').forEach(input => {
+            input.value = csrfToken;
+        });
+    }
+
     let isBelumMulai = <?= $isBelumMulai ? 'true' : 'false' ?>;
     let isSelesai = <?= $isSelesai ? 'true' : 'false' ?>;
-    let serverTime = <?= $sekarangTs * 1000 ?>;
-    let startTime = <?= $waktuMulaiTs * 1000 ?>;
+
+    const SERVER_TIME_MS = <?= $sekarangTs * 1000 ?>;
+    const CLIENT_TIME_MS = new window.Date().getTime();
+    const TIME_OFFSET = SERVER_TIME_MS - CLIENT_TIME_MS;
+    const START_TIME_MS = <?= $waktuMulaiTs * 1000 ?>;
 
     if (isBelumMulai) {
         let timerMulai = setInterval(() => {
-            serverTime += 1000;
-            let diff = Math.max(0, startTime - serverTime);
+            let accurateNow = new window.Date().getTime() + TIME_OFFSET;
+            let diff = Math.max(0, START_TIME_MS - accurateNow);
 
             if (diff <= 0) {
                 clearInterval(timerMulai);
@@ -344,8 +354,7 @@ $btnBebasClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 c
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    csrfToken = data.csrfHash;
-                    document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfToken);
+                    updateAllCSRFToken(data.csrfHash);
 
                     let label = document.querySelector('.label-hadir-' + siswaId);
                     label.innerText = data.is_hadir == 1 ? 'SUDAH HADIR' : 'BELUM HADIR';
@@ -411,8 +420,7 @@ $btnBebasClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 c
             })
             .then(res => res.json())
             .then(data => {
-                csrfToken = data.csrfHash;
-                document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfToken);
+                updateAllCSRFToken(data.csrfHash);
 
                 if (data.success) {
                     document.getElementById('displayTokenBesar').innerText = data.token;
@@ -460,7 +468,6 @@ $btnBebasClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 c
         });
     }
 
-    // FUNGSI BARU: AJAX BEBAS TOKEN
     function konfirmasiBebasToken() {
         if (isBelumMulai) {
             Swal.fire('Belum Waktunya!', 'Tunggu hingga jam ujian dimulai untuk membebaskan token.', 'info');
@@ -497,13 +504,12 @@ $btnBebasClass  = ($isBelumMulai || $isSelesai) ? 'bg-slate-200 text-slate-400 c
             })
             .then(res => res.json())
             .then(data => {
-                csrfToken = data.csrfHash;
-                document.querySelector('meta[name="csrf-token"]').setAttribute('content', csrfToken);
+                // Update CSRF secara menyeluruh
+                updateAllCSRFToken(data.csrfHash);
 
                 if (data.success) {
                     document.getElementById('displayTokenBesar').innerText = data.token;
 
-                    // Matikan hitung mundur jika sedang berjalan
                     clearInterval(timerTokenInterval);
                     document.getElementById('countdownToken').innerText = "BEBAS";
 

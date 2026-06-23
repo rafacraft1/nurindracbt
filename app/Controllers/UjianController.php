@@ -196,6 +196,15 @@ class UjianController extends BaseController
         $jawabanSiswa = (string)$this->request->getPost('jawaban');
         $siswaId      = (string)session()->get('id');
 
+        json_decode($jawabanSiswa);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'status'   => 'error',
+                'message'  => 'Gagal menyimpan! Payload jawaban corrupt.',
+                'csrfHash' => csrf_hash()
+            ]);
+        }
+
         $hasil = $this->hasilUjianModel->getHasilByJadwalSiswa($jadwalId, $siswaId);
 
         if ($hasil && $hasil['status'] === 'progress') {
@@ -203,7 +212,6 @@ class UjianController extends BaseController
                 'jawaban_peserta' => $jawabanSiswa
             ]);
 
-            // FIX: Mengembalikan csrf_hash baru agar looping AJAX di view tidak terkena blokir 403
             return $this->response->setJSON([
                 'status'   => 'success',
                 'message'  => 'Autosave berhasil',
@@ -222,10 +230,22 @@ class UjianController extends BaseController
         $payloadJson = (string)$this->request->getPost('payload_jawaban');
         if (empty($payloadJson)) return redirect()->to('/ujian')->with('error', 'Gagal mengirim jawaban. Data kosong.');
 
-        $payload      = json_decode($payloadJson, true);
+        $payload = json_decode($payloadJson, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($payload['jadwal_id'], $payload['siswa_id'], $payload['jawaban'])) {
+            return redirect()->to('/ujian')->with('error', 'Format data pengiriman tidak valid.');
+        }
+
         $jadwalId     = (string)$payload['jadwal_id'];
         $siswaId      = (string)$payload['siswa_id'];
         $jawabanSiswa = $payload['jawaban'];
+
+        $hasil = $this->hasilUjianModel->getHasilByJadwalSiswa($jadwalId, $siswaId);
+
+        if (!$hasil || $hasil['status'] === 'completed') {
+            $this->siswaModel->update($siswaId, ['is_login' => 0]);
+            return redirect()->to('/ujian')->with('success', 'Ujian Anda telah berhasil direkam sebelumnya.');
+        }
 
         $jadwal   = $this->jadwalModel->find($jadwalId);
         $bankSoal = $this->bankSoalModel->where('mapel_id', $jadwal['mapel_id'])->findAll();
@@ -251,8 +271,6 @@ class UjianController extends BaseController
         }
 
         $nilai_pg = $totalGanda > 0 ? ($benar / $totalGanda) * 100 : 0;
-
-        $hasil = $this->hasilUjianModel->getHasilByJadwalSiswa($jadwalId, $siswaId);
 
         $db = \Config\Database::connect();
         $db->transStart();

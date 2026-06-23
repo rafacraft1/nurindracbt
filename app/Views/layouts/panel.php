@@ -5,7 +5,6 @@ $logoSekolah = $pengaturanPanel['logo'] ?? null;
 $namaSekolah = $pengaturanPanel['nama_sekolah'] ?? 'CBT PRO';
 $zonaWaktu   = $pengaturanPanel['zona_waktu'] ?? 'Asia/Jakarta';
 
-// Menentukan label zona waktu secara dinamis
 $labelZona = 'WIB';
 if ($zonaWaktu === 'Asia/Makassar') $labelZona = 'WITA';
 if ($zonaWaktu === 'Asia/Jayapura') $labelZona = 'WIT';
@@ -170,11 +169,8 @@ if ($zonaWaktu === 'Asia/Jayapura') $labelZona = 'WIT';
         </header>
 
         <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8 relative">
-
             <?= $this->renderSection('content') ?>
-
             <div class="h-24 w-full pointer-events-none"></div>
-
         </main>
     </div>
 
@@ -266,16 +262,16 @@ if ($zonaWaktu === 'Asia/Jayapura') $labelZona = 'WIT';
             showToast("<?= esc(session()->getFlashdata('success'), 'js') ?>", 'success');
         <?php endif; ?>
 
-        // ==========================================
-        // ENGINE JAM SERVER PANEL
-        // ==========================================
-        let labelZona = "<?= $labelZona ?>";
-        let panelServerTime = new window.Date("<?= date('Y-m-d\TH:i:s') ?>");
+        const SERVER_TIME_MS = <?= time() * 1000 ?>;
+        const CLIENT_TIME_MS = new window.Date().getTime();
+        const TIME_OFFSET = SERVER_TIME_MS - CLIENT_TIME_MS;
+        const labelZona = "<?= $labelZona ?>";
+
         setInterval(() => {
-            panelServerTime.setSeconds(panelServerTime.getSeconds() + 1);
-            let h = String(panelServerTime.getHours()).padStart(2, '0');
-            let m = String(panelServerTime.getMinutes()).padStart(2, '0');
-            let s = String(panelServerTime.getSeconds()).padStart(2, '0');
+            let realTime = new window.Date(new window.Date().getTime() + TIME_OFFSET);
+            let h = String(realTime.getHours()).padStart(2, '0');
+            let m = String(realTime.getMinutes()).padStart(2, '0');
+            let s = String(realTime.getSeconds()).padStart(2, '0');
             let elJam = document.getElementById('jamServerPanel');
             if (elJam) elJam.innerText = `${h}:${m}:${s} ${labelZona}`;
         }, 1000);

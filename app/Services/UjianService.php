@@ -12,6 +12,13 @@ class UjianService
     {
         $this->db = \Config\Database::connect();
     }
+    private function ensureDirectoryExists(string $path): void
+    {
+        $dir = dirname($path);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+    }
 
     public function generateJsonSoal(string $jadwalId, string $mapelId): bool
     {
@@ -30,6 +37,8 @@ class UjianService
         $jsonContent = json_encode($soalClean);
         $filePath    = FCPATH . 'data_soal/jadwal_' . $jadwalId . '.json';
 
+        $this->ensureDirectoryExists($filePath);
+
         if (file_put_contents($filePath, $jsonContent)) {
             $this->db->table('jadwal_ujian')->where('id', $jadwalId)->update(['status' => 'ready']);
             return true;
@@ -38,9 +47,6 @@ class UjianService
         return false;
     }
 
-    /**
-     * Memvalidasi kebenaran Token Ujian
-     */
     public function validateToken(string $jadwalId, string $tokenInput): bool
     {
         $jsonPath = FCPATH . 'data_ruangan/token_' . $jadwalId . '.json';
@@ -49,15 +55,11 @@ class UjianService
         $tokenData = json_decode((string)file_get_contents($jsonPath), true);
         $serverToken = $tokenData['token'] ?? '';
 
-        // LOGIKA BYPASS: Jika pengawas membebaskan token
         if ($serverToken === 'FREE') return true;
 
         return strtoupper($tokenInput) === $serverToken;
     }
 
-    /**
-     * Generate Token secara acak oleh Pengawas
-     */
     public function generateTokenBaru(string $jadwalId): array
     {
         $token = substr(str_shuffle("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 6);
@@ -67,14 +69,12 @@ class UjianService
         ]);
 
         $filePath = FCPATH . 'data_ruangan/token_' . $jadwalId . '.json';
+        $this->ensureDirectoryExists($filePath);
         $success  = file_put_contents($filePath, $jsonContent) !== false;
 
         return ['success' => $success, 'token' => $token];
     }
 
-    /**
-     * Fitur Bebaskan Token (Tanpa Token)
-     */
     public function bebaskanToken(string $jadwalId): array
     {
         $jsonContent = json_encode([
@@ -83,14 +83,12 @@ class UjianService
         ]);
 
         $filePath = FCPATH . 'data_ruangan/token_' . $jadwalId . '.json';
+        $this->ensureDirectoryExists($filePath);
         $success  = file_put_contents($filePath, $jsonContent) !== false;
 
         return ['success' => $success, 'token' => 'FREE'];
     }
 
-    /**
-     * Mengambil informasi Token untuk ditampilkan di panel Pengawas
-     */
     public function getTokenData(string $jadwalId): array
     {
         $jsonPath = FCPATH . 'data_ruangan/token_' . $jadwalId . '.json';
@@ -98,7 +96,6 @@ class UjianService
             $tokenData = json_decode((string)file_get_contents($jsonPath), true);
             if (isset($tokenData['updated_at'])) {
 
-                // Deteksi status Bebas Token
                 if (($tokenData['token'] ?? '') === 'FREE') {
                     return [
                         'token'      => 'BEBAS TOKEN',

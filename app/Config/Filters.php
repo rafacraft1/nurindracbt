@@ -26,7 +26,8 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         'auth'          => \App\Filters\AuthFilter::class,
-        'watermark'     => \App\Filters\WatermarkFilter::class, // Pemanggilan alias yang benar
+        'watermark'     => \App\Filters\WatermarkFilter::class,
+        'throttle'      => \App\Filters\ThrottleFilter::class, // TAMBAHAN: Mendaftarkan Anti-DDoS
     ];
 
     public array $required = [
@@ -41,13 +42,27 @@ class Filters extends BaseFilters
         ],
     ];
 
+    // FIX EXPLOIT: Menyalakan pelindung Form & Header secara global
     public array $globals = [
-        'before' => [],
+        'before' => [
+            'csrf',           // Wajib aktif agar form terproteksi
+            'secureheaders',  // Wajib aktif agar terhindar dari Clickjacking & sniffing XSS
+        ],
         'after' => [
             'watermark' => ['except' => ['panel/cetak_kartu*', 'panel/export*', '*/cetak*']],
         ],
     ];
 
     public array $methods = [];
-    public array $filters = [];
+
+    // FIX DDOS RISK: Pasang pembatasan Request per IP hanya pada rute yang rawan di-spam
+    public array $filters = [
+        'throttle' => [
+            'before' => [
+                'login',
+                'auth/*',
+                'ujian/simpan-jawaban-ajax' // Melindungi DB dari spamming Autosave
+            ]
+        ]
+    ];
 }

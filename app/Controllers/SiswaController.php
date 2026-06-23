@@ -60,13 +60,19 @@ class SiswaController extends BaseController
             return redirect()->back()->with('error', 'NISN sudah terdaftar di sistem!');
         }
 
+        $namaLengkap   = strtoupper((string)$this->request->getPost('nama_lengkap'));
         $passwordPlain = (string)$this->request->getPost('password') ?: 'siswa123';
+
+        // FIX SECURITY: Proteksi Formula Injection pada input manual satu-persatu
+        if (in_array(substr($namaLengkap, 0, 1), ['=', '+', '-', '@'])) {
+            $namaLengkap = "'" . $namaLengkap;
+        }
 
         $this->siswaModel->insert([
             'nisn'           => $nisn,
             'password'       => password_hash($passwordPlain, PASSWORD_DEFAULT),
             'password_plain' => $passwordPlain,
-            'nama_lengkap'   => strtoupper((string)$this->request->getPost('nama_lengkap')),
+            'nama_lengkap'   => $namaLengkap,
             'tingkat'        => strtoupper((string)$this->request->getPost('tingkat')),
             'jurusan'        => strtoupper((string)$this->request->getPost('jurusan')),
             'rombel'         => strtoupper((string)$this->request->getPost('rombel')),
@@ -79,8 +85,14 @@ class SiswaController extends BaseController
 
     public function update(string $id): ResponseInterface
     {
+        $namaLengkap = strtoupper((string)$this->request->getPost('nama_lengkap'));
+
+        if (in_array(substr($namaLengkap, 0, 1), ['=', '+', '-', '@'])) {
+            $namaLengkap = "'" . $namaLengkap;
+        }
+
         $dataUpdate = [
-            'nama_lengkap' => strtoupper((string)$this->request->getPost('nama_lengkap')),
+            'nama_lengkap' => $namaLengkap,
             'tingkat'      => strtoupper((string)$this->request->getPost('tingkat')),
             'jurusan'      => strtoupper((string)$this->request->getPost('jurusan')),
             'rombel'       => strtoupper((string)$this->request->getPost('rombel')),
@@ -127,9 +139,6 @@ class SiswaController extends BaseController
     {
         $step = (string)($this->request->getPost('step') ?? 'init');
 
-        // ==============================================================================
-        // TAHAP 1: INIT - Konversi ke JSONL (Baris per Baris)
-        // ==============================================================================
         if ($step === 'init') {
             $file = $this->request->getFile('file_excel');
 
@@ -167,9 +176,6 @@ class SiswaController extends BaseController
             }
         }
 
-        // ==============================================================================
-        // TAHAP 2: PROCESS - Streaming Data, Password Cache & Bulk Insert
-        // ==============================================================================
         if ($step === 'process') {
             set_time_limit(0);
 
@@ -182,7 +188,6 @@ class SiswaController extends BaseController
                 return $this->response->setJSON(['status' => 'error', 'message' => 'File temporary tidak ditemukan. Muat ulang halaman.', 'csrf' => csrf_hash()]);
             }
 
-            // OPTIMASI: Membaca file hanya pada baris yang dibutuhkan (Seek)
             $file = new \SplFileObject($filePath);
             $file->seek($offset);
 
@@ -196,7 +201,6 @@ class SiswaController extends BaseController
                 $file->next();
             }
 
-            // Filter Anti-Duplikat (Hanya melacak NISN di chunk ini)
             $nisnList = [];
             foreach ($chunk as $row) {
                 $nisnVal = trim((string)($row[0] ?? ''));
@@ -227,7 +231,6 @@ class SiswaController extends BaseController
 
                 $passwordPlain = trim((string)($row[5] ?? '')) ?: 'siswa123';
 
-                // OPTIMASI: Caching Hash memori sementara
                 if (!isset($passwordCache[$passwordPlain])) {
                     $passwordCache[$passwordPlain] = password_hash($passwordPlain, PASSWORD_DEFAULT);
                 }
@@ -252,7 +255,6 @@ class SiswaController extends BaseController
                 $this->siswaModel->insertBatch($dataInsert);
             }
 
-            // Garbage collection manual
             unset($chunk, $dataInsert, $existingMap, $passwordCache, $file);
 
             return $this->response->setJSON([
@@ -263,9 +265,6 @@ class SiswaController extends BaseController
             ]);
         }
 
-        // ==============================================================================
-        // TAHAP 3: FINISH - Membersihkan File
-        // ==============================================================================
         if ($step === 'finish') {
             $tempId = (string)$this->request->getPost('temp_id');
             $filePath = WRITEPATH . 'uploads/' . $tempId . '.jsonl';
