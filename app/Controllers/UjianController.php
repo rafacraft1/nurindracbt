@@ -196,6 +196,14 @@ class UjianController extends BaseController
         $jawabanSiswa = (string)$this->request->getPost('jawaban');
         $siswaId      = (string)session()->get('id');
 
+        // =========================================================================================
+        // FIX TAHAP 7.1: Mencegah Session Blocking / Lag Massal pada layar siswa.
+        // Segera tutup gembok file session setelah mendapatkan 'id' siswa di atas. 
+        // Ini membiarkan request AJAX tetap berjalan ke DB, dan siswa bebas mengklik soal lainnya tanpa nge-lag.
+        // =========================================================================================
+        session_write_close();
+
+        // OPTIMASI: Validasi integritas JSON sebelum menembak Database (Menghindari corrupt data)
         json_decode($jawabanSiswa);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return $this->response->setStatusCode(400)->setJSON([
@@ -242,6 +250,7 @@ class UjianController extends BaseController
 
         $hasil = $this->hasilUjianModel->getHasilByJadwalSiswa($jadwalId, $siswaId);
 
+        // OPTIMASI: Cegah "Double Submit / Race Condition"
         if (!$hasil || $hasil['status'] === 'completed') {
             $this->siswaModel->update($siswaId, ['is_login' => 0]);
             return redirect()->to('/ujian')->with('success', 'Ujian Anda telah berhasil direkam sebelumnya.');

@@ -18,18 +18,43 @@
 <?= $this->section('content') ?>
 
 <?php
-$tahunAjaran = $pengaturan['tahun_ajaran'] ?? '-';
-$semester = isset($pengaturan['semester']) ? strtoupper($pengaturan['semester']) : '-';
-$namaUser = session()->get('nama_lengkap') ?? 'Pengguna';
+$tahunAjaran  = $pengaturan['tahun_ajaran'] ?? '-';
+$semester     = isset($pengaturan['semester']) ? strtoupper($pengaturan['semester']) : '-';
+$namaUser     = session()->get('nama_lengkap') ?? 'Pengguna';
 $isSuperAdmin = ($role === 'admin');
-$isPanitia = ($is_panitia == 1);
-$isGuru = ($role === 'guru' && !$isPanitia);
+$isPanitia    = ($is_panitia == 1);
+$isGuru       = ($role === 'guru' && !$isPanitia);
+
+// ==============================================================================
+// ENGINE SMART GREETING (Timezone-Aware)
+// Membaca zona waktu dari pengaturan sekolah agar sapaan 100% akurat
+// ==============================================================================
+$zonaWaktu = $pengaturan['zona_waktu'] ?? 'Asia/Jakarta';
+$waktuSistem = new \DateTime('now', new \DateTimeZone($zonaWaktu));
+$jam = (int)$waktuSistem->format('H');
+
+if ($jam >= 3 && $jam < 11) {
+    $sapaan = 'Selamat Pagi';
+    $iconSapaan = '<span class="text-amber-500 text-lg leading-none drop-shadow-sm">🌅</span>';
+} elseif ($jam >= 11 && $jam < 15) {
+    $sapaan = 'Selamat Siang';
+    $iconSapaan = '<span class="text-yellow-500 text-lg leading-none drop-shadow-sm">☀️</span>';
+} elseif ($jam >= 15 && $jam < 18) {
+    $sapaan = 'Selamat Sore';
+    $iconSapaan = '<span class="text-orange-500 text-lg leading-none drop-shadow-sm">🌇</span>';
+} else {
+    $sapaan = 'Selamat Malam';
+    $iconSapaan = '<span class="text-indigo-400 text-lg leading-none drop-shadow-sm">🌙</span>';
+}
 ?>
 
 <div class="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
     <div>
         <h2 class="text-3xl font-bold text-slate-800 tracking-tight">Dashboard</h2>
-        <p class="text-slate-500 text-sm mt-1">Selamat datang kembali, <span class="font-bold text-slate-700"><?= esc($namaUser) ?></span>.</p>
+        <p class="text-slate-500 text-sm mt-1.5 flex items-center gap-1.5">
+            <?= $iconSapaan ?>
+            <span><?= $sapaan ?>, <strong class="text-slate-700"><?= esc($namaUser) ?></strong>.</span>
+        </p>
     </div>
     <div class="bg-blue-50/50 border border-blue-100 px-5 py-3 rounded-2xl flex items-center gap-4 shadow-sm shrink-0 backdrop-blur-sm">
         <div class="p-2 bg-blue-100 text-blue-600 rounded-lg">
@@ -223,7 +248,7 @@ $isGuru = ($role === 'guru' && !$isPanitia);
                     <a href="/panel/penilaian" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition-all group">
                         <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors text-slate-500">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                             </svg>
                         </div>
                         <div>

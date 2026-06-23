@@ -20,6 +20,8 @@
         <select name="mapel" onchange="document.getElementById('filterForm').submit()" class="px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white shadow-sm outline-none text-sm w-full lg:w-max font-bold text-slate-700 transition cursor-pointer">
             <?php if (empty($mapel)): ?>
                 <option value="">-- Anda belum diplot ke mapel apapun --</option>
+            <?php else: ?>
+                <option value="">-- Pilih Mata Pelajaran --</option>
             <?php endif; ?>
             <?php foreach ($mapel as $m): ?>
                 <option value="<?= $m['id'] ?>" <?= $filterMapelId == $m['id'] ? 'selected' : '' ?>>
@@ -54,13 +56,29 @@
 <?php endif; ?>
 
 <div class="space-y-4">
-    <?php if (empty($soal) && !empty($mapel)): ?>
-        <div class="bg-white p-12 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-500 border-dashed flex flex-col items-center justify-center">
-            <svg class="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <?php if (empty($mapel)): ?>
+        <div class="py-16 px-6 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300">
+            <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <p class="text-slate-600 font-bold text-lg">Akses Ditolak / Data Kosong</p>
+            <p class="text-sm text-slate-500 mt-1">Anda belum di-plot ke mata pelajaran apapun. Hubungi Panitia atau Admin.</p>
+        </div>
+    <?php elseif (empty($filterMapelId)): ?>
+        <div class="py-16 px-6 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300">
+            <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+            </svg>
+            <p class="text-slate-600 font-bold text-lg">Pilih Mata Pelajaran</p>
+            <p class="text-sm text-slate-500 mt-1">Silakan pilih mata pelajaran pada dropdown di atas untuk melihat atau mengelola soal.</p>
+        </div>
+    <?php elseif (empty($soal)): ?>
+        <div class="py-16 px-6 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300">
+            <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
-            <p class="font-bold text-slate-600 text-lg">Belum ada soal terdaftar.</p>
-            <p class="text-sm mt-1">Buat secara manual atau download template Excel lalu import.</p>
+            <p class="text-slate-600 font-bold text-lg">Belum ada soal terdaftar.</p>
+            <p class="text-sm text-slate-500 mt-1">Buat secara manual atau download template Excel lalu import.</p>
         </div>
     <?php endif; ?>
 
