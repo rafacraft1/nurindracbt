@@ -45,13 +45,38 @@ Pastikan server (VPS/Shared Hosting) Anda memenuhi spesifikasi berikut:
 Unduh atau *clone* repositori ini ke dalam server Anda:
 
 ```bash
-git clone [https://github.com/username-anda/nurindracbt.git](https://github.com/username-anda/nurindracbt.git)
-cd nurindracbt
+git clone https://github.com/rafacraft1/nurindracbt
 
-### Langkah 2: Clone Repositori
+cd nurindracbt
+```
+
+### Langkah 2: Install Dependensi (Composer)
 
 Jalankan perintah berikut untuk mengunduh pustaka:
 
 ```bash
 composer install --no-dev --optimize-autoloader
+```
 
+### Langkah 3: Konfigurasi Environment (.env)
+
+1. Salin file env bawaan menjadi .env:
+
+```bash
+cp env .env
+``
+
+2. Buka dan edit file .env. Sesuaikan parameter berikut:
+
+```text
+CI_ENVIRONMENT = production
+
+   app.baseURL = '[https://ujian.sekolahanda.com/](https://ujian.sekolahanda.com/)'
+   app.forceGlobalSecureRequests = true # Ubah ke true jika memakai HTTPS/SSL
+
+   database.default.hostname = localhost
+   database.default.database = nama_database_anda
+   database.default.username = user_database_anda
+   database.default.password = password_database_anda
+   database.default.DBDriver = MySQLi
+```
